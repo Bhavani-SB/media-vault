@@ -115,12 +115,12 @@ def upload():
 
         # DB Entry
         data = {
-            "file_name": safe_name,
-            "file_url": file_url,
-            "file_size": len(file_content),
-            "user_id": session['user_id'],
-            "folder_id": int(folder_id) if folder_id else None
-        }
+    "file_name": safe_name,
+    "file_url": file_url,
+    "file_size": len(file_content),
+    "user_id": session['user_id'], # This is the key!
+    "folder_id": int(folder_id) if folder_id else None
+}
         supabase.table("file_metadata").insert(data).execute()
         
     return redirect(request.referrer or url_for('index'))
