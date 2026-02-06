@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Media Vault</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #1a73e8;
+            --sidebar-width: 250px;
+            --text-main: #202124;
+            --text-sub: #5f6368;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--text-main);
+        }
+
+        /* --- Layout --- */
+        .header {
+            height: 64px; padding: 0 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #dadce0; background: white;
+        }
+
+        .main-wrapper { display: flex; height: calc(100vh - 65px); }
+        .sidebar { width: var(--sidebar-width); padding: 16px 8px; background: white; border-right: 1px solid #dadce0; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 15px;
+            padding: 12px 20px; border-radius: 0 20px 20px 0;
+            text-decoration: none; color: var(--text-main); font-size: 14px;
+        }
+        .nav-item:hover { background: #f1f3f4; }
+
+        /* --- Profile Card --- */
+        .content { flex-grow: 1; padding: 40px; display: flex; justify-content: center; }
+
+        .profile-card {
+            background: white; width: 100%; max-width: 500px;
+            padding: 30px; border-radius: 12px; border: 1px solid #dadce0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: fit-content;
+        }
+
+        .profile-header { text-align: center; margin-bottom: 30px; }
+        .avatar-circle {
+            width: 80px; height: 80px; background: #e8f0fe; color: var(--primary-blue);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 15px; font-size: 40px; font-weight: bold;
+        }
+
+        .info-row {
+            display: flex; justify-content: space-between; padding: 15px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .info-label { color: var(--text-sub); font-size: 14px; }
+        .info-value { font-weight: 500; font-size: 14px; }
+
+        /* --- Storage Bar --- */
+        .storage-section { margin-top: 30px; }
+        .progress-bar {
+            height: 8px; background: #e8eaed; border-radius: 4px; overflow: hidden; margin: 10px 0;
+        }
+        .progress-fill { height: 100%; background: var(--primary-blue); width: 15%; /* Dynamic */ }
+
+        .logout-btn {
+            display: block; width: 100%; padding: 12px; margin-top: 30px;
+            background: #fff; border: 1px solid #dadce0; border-radius: 6px;
+            color: #d93025; font-weight: 500; cursor: pointer; text-align: center;
+            text-decoration: none; transition: 0.2s;
+        }
+        .logout-btn:hover { background: #fce8e6; border-color: #f1c4c4; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
+            <span style="font-size: 20px; font-weight: 500;">Media Vault</span>
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+        <aside class="sidebar">
+            <nav>
+                <a href="/frontend/index.html" class="nav-item"><span class="material-icons">folder</span> My Drive</a>
+                <a href="/frontend/templates/starred.html" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
+                <a href="/frontend/templates/shared.html" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
+                <a href="/frontend/templates/trash.html" class="nav-item"><span class="material-icons">delete_outline</span> Trash</a>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="avatar-circle">
+                        {{ user_email[0].upper() if user_email else 'U' }}
+                    </div>
+                    <h2 style="margin: 0; font-weight: 500;">{{ user_email.split('@')[0] }}</h2>
+                    <p style="color: var(--text-sub); margin: 5px 0;">Personal Account</p>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ user_email }}</span>
+                </div>
+
+                <div class="storage-section">
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span>Storage</span>
+                        <span>1.2 GB of 15 GB used</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 8%;"></div>
+                    </div>
+                </div>
+
+                <a href="/frontend/templates/login.html" class="logout-btn">
+                    <span class="material-icons" style="vertical-align: middle; font-size: 18px; margin-right: 8px;">logout</span>
+                    Sign out
+                </a>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>
