@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Vault - Professional Drive</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #1a73e8;
+            --sidebar-width: 250px;
+            --bg-color: #f8f9fa;
+            --text-main: #202124;
+            --text-sub: #5f6368;
+            --danger-red: #ea4335;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: white;
+            color: var(--text-main);
+        }
+
+        /* --- Header --- */
+        .header {
+            height: 64px; padding: 0 16px;
+            display: flex; align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #dadce0;
+            position: sticky; top: 0; background: white; z-index: 1000;
+        }
+
+        .logo {
+            display: flex; align-items: center; gap: 10px;
+            width: var(--sidebar-width); font-size: 20px; font-weight: 500;
+        }
+
+        /* Improved Search Bar for Filters */
+        .search-container {
+            flex-grow: 1; max-width: 800px;
+            background: #f1f3f4; border-radius: 8px;
+            height: 48px; display: flex; align-items: center; padding: 0 10px;
+        }
+
+        .search-container form {
+            display: flex; width: 100%; align-items: center; gap: 5px;
+        }
+
+        .search-container input {
+            background: transparent; border: none; flex-grow: 1;
+            padding: 10px; font-size: 16px; outline: none;
+        }
+
+        .search-container select {
+            background: transparent; border: none; color: var(--text-sub);
+            font-size: 13px; outline: none; cursor: pointer; padding: 5px;
+        }
+
+        /* --- Layout --- */
+        .main-wrapper { display: flex; height: calc(100vh - 65px); }
+
+        .sidebar { width: var(--sidebar-width); padding: 16px 8px; flex-shrink: 0; }
+
+        .new-btn {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 24px; border-radius: 28px;
+            border: 1px solid #dadce0; background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;
+            margin-bottom: 20px; font-weight: 500;
+        }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 15px;
+            padding: 12px 20px; border-radius: 0 20px 20px 0;
+            text-decoration: none; color: var(--text-main); font-size: 14px; margin-bottom: 4px;
+        }
+
+        .nav-item:hover { background: #f1f3f4; }
+        .nav-item.active { background: #e8f0fe; color: var(--primary-blue); font-weight: bold; }
+
+        /* --- Content --- */
+        .content { flex-grow: 1; padding: 24px; overflow-y: auto; border-left: 1px solid #dadce0; }
+        .section-title { font-size: 14px; font-weight: 500; color: var(--text-sub); margin: 20px 0 15px 0; }
+
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+
+        /* Cards */
+        .folder-card, .file-card { border: 1px solid #dadce0; border-radius: 8px; position: relative; }
+        .folder-card { padding: 12px; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: inherit; }
+        
+        .file-card { overflow: visible; transition: 0.2s; }
+        .file-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Fixed Preview Styling */
+        .file-preview { height: 120px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border-radius: 8px 8px 0 0; }
+        .file-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+        .file-details { padding: 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; }
+        .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+
+        /* --- Context Menu --- */
+        .more-btn { cursor: pointer; color: var(--text-sub); padding: 4px; border-radius: 50%; }
+        .more-btn:hover { background: #eee; }
+
+        .dropdown-menu {
+            display: none; position: absolute; right: 10px; top: 40px;
+            background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px; z-index: 1000; min-width: 180px; padding: 8px 0; border: 1px solid #eee;
+        }
+
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 15px; font-size: 14px; color: #3c4043;
+            text-decoration: none; cursor: pointer;
+        }
+        .dropdown-item:hover { background-color: #f1f3f4; }
+        .dropdown-item .material-icons { font-size: 18px; color: #5f6368; }
+
+        /* --- Modals --- */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 8px; width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        
+        .timer-input-group { margin-top: 15px; }
+        .timer-input-group label { display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 5px; }
+        .timer-input-group input { width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="logo">
+        <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
+        <span>Media Vault</span>
+    </div>
+    
+    <div class="search-container">
+        <form action="/search" method="GET">
+            <span class="material-icons" style="color: var(--text-sub); padding-left: 10px;">search</span>
+            <input type="text" name="query" placeholder="Search in Drive" value="{{ request.args.get('query', '') }}">
+            
+            <select name="type">
+                <option value="">All Types</option>
+                <option value="png" {% if request.args.get('type') == 'png' %}selected{% endif %}>PNG</option>
+                <option value="jpg" {% if request.args.get('type') == 'jpg' %}selected{% endif %}>JPG</option>
+                <option value="pdf" {% if request.args.get('type') == 'pdf' %}selected{% endif %}>PDF</option>
+            </select>
+
+            <select name="sort">
+                <option value="created_at" {% if request.args.get('sort') == 'created_at' %}selected{% endif %}>Date</option>
+                <option value="file_name" {% if request.args.get('sort') == 'file_name' %}selected{% endif %}>Name</option>
+                <option value="file_size" {% if request.args.get('sort') == 'file_size' %}selected{% endif %}>Size</option>
+            </select>
+            <button type="submit" style="display:none"></button>
+        </form>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
+        
+        <a href="/profile" title="Go to Profile" style="text-decoration: none; display: flex; align-items: center;">
+            <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                {{ session.get('user_email', 'U')[0].upper() }}
+            </div>
+        </a>
+    </div>
+</header>
+
+<div class="main-wrapper">
+    <aside class="sidebar">
+        <button class="new-btn" onclick="toggleNewMenu()">
+            <span class="material-icons" style="color: #34a853;">add</span>
+            <span>New</span>
+        </button>
+        
+        <div id="new-dropdown" style="display:none; position:absolute; top:130px; left:20px; background:white; box-shadow:0 4px 12px rgba(0,0,0,0.15); border-radius:8px; z-index:100; min-width:180px; padding: 8px 0; border: 1px solid #eee;">
+            <div class="dropdown-item" onclick="openFolderModal()">
+                <span class="material-icons">create_new_folder</span> New Folder
+            </div>
+            <label for="file-upload" class="dropdown-item" style="margin:0; cursor:pointer;">
+                <span class="material-icons">upload_file</span> File Upload
+            </label>
+        </div>
+
+        <nav>
+            <a href="/" class="nav-item {{ 'active' if request.path == '/' }}"><span class="material-icons">folder</span> My Drive</a>
+            <a href="/starred" class="nav-item {{ 'active' if request.path == '/starred' }}"><span class="material-icons">star_border</span> Starred</a>
+            <a href="/shared" class="nav-item {{ 'active' if request.path == '/shared' }}"><span class="material-icons">people_outline</span> Shared with me</a>
+            <a href="/trash" class="nav-item {{ 'active' if request.path == '/trash' }}"><span class="material-icons">delete_outline</span> Trash</a>
+            <a href="/activity" class="nav-item {{ 'active' if request.path == '/activity' }}"><span class="material-icons">history</span> Recent Activity</a>
+        </nav>
+
+        <div style="margin-top: auto; padding: 20px 10px; border-top: 1px solid #eee;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-sub); margin-bottom: 8px;">
+                <span class="material-icons" style="font-size: 18px;">cloud_queue</span>
+                <span>Storage ({{ usage|round(2) }} MB of {{ quota }} MB)</span>
+            </div>
+            <div style="width: 100%; height: 4px; background: #e8eaed; border-radius: 2px; overflow: hidden;">
+                {% set percent = (usage/quota)*100 %}
+                <div style="width: {{ percent }}%; height: 100%; background: {{ '#ea4335' if percent > 90 else '#1a73e8' }}; transition: width 0.3s;"></div>
+            </div>
+            <p style="font-size: 11px; color: var(--text-sub); margin-top: 5px;">{{ (100 - percent)|round }}% free space left</p>
+        </div>
+    </aside>
+
+    <main class="content">
+        <h2 style="font-weight: 400; margin-top: 0;">{{ current_folder_name if current_folder_name else 'My Drive' }}</h2>
+        
+        <div class="breadcrumbs" style="margin-bottom: 20px; font-size: 14px; color: #5f6368;">
+            <a href="/" style="text-decoration: none; color: #1a73e8;">My Drive</a>
+            {% if breadcrumbs %}
+                {% for crumb in breadcrumbs %}
+                    <span style="margin: 0 8px;">/</span>
+                    <a href="/folder/{{ crumb.id }}" style="text-decoration: none; color: #1a73e8;">{{ crumb.name }}</a>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {% if folders %}
+        <div class="section-title">Folders</div>
+        <div class="file-grid">
+            {% for folder in folders %}
+            <div class="folder-card">
+                <a href="{{ url_for('index', folder_id=folder.id) }}" style="display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit; flex-grow:1;">
+                    <span class="material-icons" style="color: #5f6368;">folder</span>
+                    <span class="file-name">{{ folder.name }}</span>
+                </a>
+                <span class="material-icons more-btn" onclick="toggleMenu(event, 'fd-{{ folder.id }}')">more_vert</span>
+                <div id="fd-{{ folder.id }}" class="dropdown-menu">
+                    <div class="dropdown-item" onclick="renameItem('folder', '{{ folder.id }}', '{{ folder.name }}')">
+                        <span class="material-icons">edit</span> Rename
+                    </div>
+                    <a href="/delete_folder/{{ folder.id }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Delete folder?')">
+                        <span class="material-icons" style="color:var(--danger-red)">delete</span> Delete
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="section-title">Files</div>
+        <div class="file-grid">
+            {% if not files and not folders %}
+            <div style="text-align: center; margin-top: 100px; color: #9aa0a6;">
+                <span class="material-icons" style="font-size: 80px; opacity: 0.2;">folder_open</span>
+                <p>This folder is empty. Upload something!</p>
+            </div>
+            {% endif %}
+            
+            {% for file in files %}
+            <div class="file-card">
+                <div class="file-preview">
+                    {% if file.file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) %}
+                        <img src="{{ file.file_url }}" alt="Preview">
+                    {% elif file.file_name.lower().endswith('.pdf') %}
+                        <span class="material-icons" style="font-size: 48px; color: #ea4335;">picture_as_pdf</span>
+                    {% else %}
+                        <span class="material-icons" style="font-size: 48px; color: #dadce0;">description</span>
+                    {% endif %}
+                    
+                    {% if file.is_starred %}
+                    <span class="material-icons" style="position:absolute; top:8px; left:8px; color:#f4b400; font-size:18px;">star</span>
+                    {% endif %}
+                </div>
+
+                <div class="file-details">
+                    <span class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</span>
+                    <span class="material-icons more-btn" onclick="toggleMenu(event, 'f-{{ file.id }}')">more_vert</span>
+
+                    <div id="f-{{ file.id }}" class="dropdown-menu">
+                        {% if file.file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.pdf')) %}
+                            <a href="{{ file.file_url }}" target="_blank" class="dropdown-item">
+                                <span class="material-icons">visibility</span> Preview
+                            </a>
+                        {% endif %}
+                        
+                        <div class="dropdown-item" onclick="openShareModal('{{ file.id }}', '{{ file.file_name }}')">
+                            <span class="material-icons">person_add</span> Share
+                        </div>
+                        <a href="/toggle_star/{{ file.id }}" class="dropdown-item">
+                            <span class="material-icons">{{ 'star' if file.is_starred else 'star_border' }}</span> {{ 'Unstar' if file.is_starred else 'Star' }}
+                        </a>
+                        <a href="{{ file.file_url }}" download class="dropdown-item">
+                            <span class="material-icons">download</span> Download
+                        </a>
+                        <div class="dropdown-item" onclick="renameItem('file', '{{ file.id }}', '{{ file.file_name }}')">
+                            <span class="material-icons">edit</span> Rename
+                        </div>
+                        <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
+                        <a href="/move_to_trash/{{ file.id }}" class="dropdown-item" style="color:var(--danger-red)">
+                            <span class="material-icons" style="color:var(--danger-red)">delete</span> Move to Trash
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+
+<div id="folderModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">New folder</h3>
+        <form action="/create_folder" method="post">
+            <input type="hidden" name="parent_id" value="{{ current_folder_id or '' }}">
+            <input type="text" name="folder_name" style="width:100%; padding:10px; border:1px solid var(--primary-blue); border-radius:4px; box-sizing:border-box;" placeholder="Untitled folder" required autofocus>
+            <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:20px;">
+                <button type="button" onclick="closeModal('folderModal')" style="background:none; border:none; cursor:pointer; color:#5f6368;">Cancel</button>
+                <button type="submit" style="background:none; border:none; color:var(--primary-blue); font-weight:bold; cursor:pointer;">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="shareModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; display:flex; align-items:center; gap:10px;">
+            <span class="material-icons">share</span> Share File
+        </h3>
+        <p id="share-file-display" style="font-size:13px; color:var(--text-sub); margin-bottom:15px;"></p>
+        
+        <form action="/share_file" method="post">
+            <input type="hidden" name="file_id" id="share-file-id">
+            
+            <div class="timer-input-group">
+                <label>Recipient Email</label>
+                <input type="email" name="share_with_email" placeholder="Enter user email" required>
+            </div>
+
+            <div class="timer-input-group">
+                <label>Access Expires At (Date & Time)</label>
+                <input type="datetime-local" name="expires_at" id="expires_at" required>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:15px; margin-top:25px;">
+                <button type="button" onclick="closeModal('shareModal')" style="background:none; border:none; cursor:pointer; color:#5f6368;">Cancel</button>
+                <button type="submit" style="background:var(--primary-blue); border:none; color:white; padding:10px 24px; border-radius:4px; font-weight:bold; cursor:pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Share</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<form id="upload-form" action="/upload" method="post" enctype="multipart/form-data" style="display: none;">
+    <input type="hidden" name="folder_id" value="{{ current_folder_id or '' }}">
+    <input type="file" name="file" id="file-upload" onchange="this.form.submit()">
+</form>
+
+<script>
+    function toggleNewMenu() {
+        var menu = document.getElementById("new-dropdown");
+        menu.style.display = (menu.style.display === "none") ? "block" : "none";
+    }
+
+    function toggleMenu(event, id) {
+        event.stopPropagation();
+        document.querySelectorAll('.dropdown-menu').forEach(m => {
+            if(m.id !== id) m.style.display = 'none';
+        });
+        let menu = document.getElementById(id);
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function openFolderModal() { document.getElementById("folderModal").style.display = "block"; toggleNewMenu(); }
+    
+    function openShareModal(fileId, fileName) {
+        document.getElementById("share-file-id").value = fileId;
+        document.getElementById("share-file-display").innerText = "Sharing: " + fileName;
+        let now = new Date();
+        now.setHours(now.getHours() + 1);
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('expires_at').value = now.toISOString().slice(0,16);
+        document.getElementById("shareModal").style.display = "block";
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    }
+
+    function closeModal(modalId) { document.getElementById(modalId).style.display = "none"; }
+
+    function renameItem(type, id, oldName) {
+        let newName = prompt(`Rename ${type}:`, oldName);
+        if(newName && newName !== oldName) {
+            window.location.href = `/rename_${type}/${id}?new_name=${encodeURIComponent(newName)}`;
+        }
+    }
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) { event.target.style.display = "none"; }
+        if (!event.target.closest('.new-btn')) { document.getElementById("new-dropdown").style.display = "none"; }
+        if (!event.target.closest('.more-btn')) { document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none'); }
+    }
+</script>
+</body>
+</html>

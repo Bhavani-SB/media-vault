@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Media Vault</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #1a73e8;
+            --sidebar-width: 250px;
+            --bg-color: #f8f9fa;
+            --text-main: #202124;
+            --text-sub: #5f6368;
+            --danger-red: #ea4335;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: white;
+            color: var(--text-main);
+        }
+
+        /* --- Header --- */
+        .header {
+            height: 64px; padding: 0 16px;
+            display: flex; align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #dadce0;
+            position: sticky; top: 0; background: white; z-index: 1000;
+        }
+
+        .logo {
+            display: flex; align-items: center; gap: 10px;
+            width: var(--sidebar-width); font-size: 20px; font-weight: 500;
+        }
+
+        /* --- Layout --- */
+        .main-wrapper { display: flex; height: calc(100vh - 65px); }
+
+        .sidebar { width: var(--sidebar-width); padding: 16px 8px; flex-shrink: 0; border-right: 1px solid #dadce0; position: relative; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 15px;
+            padding: 12px 20px; border-radius: 0 20px 20px 0;
+            text-decoration: none; color: var(--text-main); font-size: 14px; margin-bottom: 4px;
+        }
+
+        .nav-item:hover { background: #f1f3f4; }
+        .nav-item.active { background: #e8f0fe; color: var(--primary-blue); font-weight: bold; }
+
+        /* --- Content --- */
+        .content { flex: 1; padding: 40px; overflow-y: auto; background: var(--bg-color); }
+        
+        .profile-card { 
+            background: white; padding: 30px; border-radius: 12px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 600px; 
+            margin: 0 auto; border: 1px solid #dadce0;
+        }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-main); font-size: 14px; }
+        input { 
+            width: 100%; padding: 12px; border: 1px solid #dadce0; 
+            border-radius: 6px; box-sizing: border-box; font-size: 14px;
+        }
+        input:focus { outline: none; border-color: var(--primary-blue); }
+        
+        .btn-update { 
+            background: var(--primary-blue); color: white; border: none; 
+            padding: 12px 20px; border-radius: 6px; cursor: pointer; 
+            width: 100%; font-size: 15px; font-weight: 500; margin-top: 10px;
+        }
+        .btn-update:hover { background: #1765cc; }
+
+        .alert { padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .alert-info { background: #e3f2fd; color: #0d47a1; border: 1px solid #bbdefb; }
+
+        .storage-status {
+            padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 25px;
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="logo">
+        <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
+        <span>Media Vault</span>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
+        
+        <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+            {{ session.get('user_email', 'U')[0].upper() }}
+        </div>
+    </div>
+</header>
+
+<div class="main-wrapper">
+    <aside class="sidebar">
+        <nav style="margin-top: 10px;">
+            <a href="/" class="nav-item"><span class="material-icons">folder</span> My Drive</a>
+            <a href="/starred" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
+            <a href="/shared" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
+            <a href="/activity" class="nav-item"><span class="material-icons">history</span> Recent Activity</a>
+            <a href="/trash" class="nav-item"><span class="material-icons">delete_outline</span> Trash</a>
+            <a href="/profile" class="nav-item active"><span class="material-icons">person</span> Profile</a>
+            <a href="/logout" class="nav-item" style="color: var(--danger-red);"><span class="material-icons">logout</span> Logout</a>
+        </nav>
+
+        <div style="margin-top: auto; padding: 20px 10px; border-top: 1px solid #eee; position: absolute; bottom: 0; width: 220px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
+                <span class="material-icons" style="font-size: 16px;">cloud_queue</span>
+                <span>Storage ({{ usage|round(2) }} MB of {{ quota }} MB)</span>
+            </div>
+            <div style="width: 100%; height: 4px; background: #e8eaed; border-radius: 2px; overflow: hidden;">
+                {% set percent = (usage/quota)*100 %}
+                <div style="width: {{ percent }}%; height: 100%; background: {{ '#ea4335' if percent > 90 else '#1a73e8' }}; transition: width 0.3s;"></div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="profile-card">
+            <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 25px;">Account Settings</h2>
+            
+            {% if message %}
+                <div class="alert alert-info">{{ message }}</div>
+            {% endif %}
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="text" value="{{ user_email }}" disabled style="background: #f1f3f4; color: #5f6368; cursor: not-allowed;">
+            </div>
+
+            <div class="storage-status">
+                <label style="margin-bottom: 10px;">Storage Details</label>
+                <p style="font-size: 13px; color: var(--text-sub); margin: 5px 0;">{{ usage|round(2) }} MB used of {{ quota }} MB total</p>
+                <div style="width: 100%; height: 8px; background: #dadce0; border-radius: 4px; margin-top: 10px;">
+                    <div style="width: {{ percent }}%; height: 100%; background: var(--primary-blue); border-radius: 4px;"></div>
+                </div>
+            </div>
+
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #dadce0;">
+
+            <h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 500;">Security</h4>
+            <form method="POST">
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" name="new_password" required placeholder="Enter at least 6 characters">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" name="confirm_password" required placeholder="Re-type your password">
+                </div>
+                <button type="submit" class="btn-update">Update Password</button>
+            </form>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>
