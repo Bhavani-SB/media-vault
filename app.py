@@ -11,39 +11,20 @@ from email.message import EmailMessage
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 
-# --- MAIL CONFIG & FUNCTION ---
-SENDER_EMAIL = "sb.bhavani.sb@gmail.com"
-APP_PASSWORD = "bxyj mvyy laxu sawt" # Google App Password
 load_dotenv()
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+APP_PASSWORD = os.getenv("APP_PASSWORD")
+# --- MAIL CONFIG & FUNCTION ---
+ # Google App Password
 
-def send_expiry_alert(receiver_email, filename):
-    msg = EmailMessage()
-    msg['Subject'] = "Media Vault: File Expiry Alert! ⚠️"
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = receiver_email
-    
-    body = f"Hii,\n\nThe file '{filename}' shared with you is about to expire (75% time completed). Please download it soon!\n\nTeam Media Vault"
-    msg.set_content(body)
 
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(SENDER_EMAIL, APP_PASSWORD)
-            smtp.send_message(msg)
-            print(f"Alert mail sent to {receiver_email}")
-    except Exception as e:
-        print(f"Mail Error: {e}")
 
-# Scheduler start pannunga
-scheduler = BackgroundScheduler()
-scheduler.start()
 
 app = Flask(__name__)
 CORS(app)
 app.secret_key = "230525"
-
-# Supabase Credentials
-url = "https://wpawraxihaynnuikhxqi.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwYXdyYXhpaGF5bm51aWtoeHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1NTQyOTIsImV4cCI6MjA4NDEzMDI5Mn0.22ZIHmLr01r8VZNxs0B1QYy3C_a1f3o27kAD-CA7T8s"
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(url, key)
 
@@ -95,6 +76,24 @@ def log_activity(user_id, action, details):
         }).execute()
     except Exception as e:
         print(f"Logging Error: {e}")
+
+def send_expiry_alert(receiver_email, filename):
+    msg = EmailMessage()
+    msg['Subject'] = "Media Vault: File Expiry Alert! ⚠️"
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = receiver_email
+    
+    body = f"Hii,\n\nThe file '{filename}' shared with you is about to expire (75% time completed). Please download it soon!\n\nTeam Media Vault"
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(SENDER_EMAIL, APP_PASSWORD)
+            smtp.send_message(msg)
+            print(f"Alert mail sent to {receiver_email}")
+    except Exception as e:
+        print(f"Mail Error: {e}")
+
 
 # --- ROUTES ---
 def get_breadcrumbs(folder_id):
@@ -737,6 +736,15 @@ def delete_folder(folder_id):
     log_activity(session['user_id'], "Deleted Folder", f"Folder ID: {folder_id}")
     
     return redirect(request.referrer or url_for('index'))
+scheduler = BackgroundScheduler()
+
+def start_scheduler():
+    if not scheduler.running:
+        scheduler.start()
+
+# Only start scheduler in Render (production)
+if os.environ.get("RENDER") or os.environ.get("PORT"):
+    start_scheduler()
 
 if __name__ == '__main__':
     app.run(debug=True)
