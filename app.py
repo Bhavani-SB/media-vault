@@ -310,13 +310,38 @@ def inject_storage_breakdown():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
+        # Form-la irunthu details-ah edukkirom
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
         email = request.form.get('email')
         password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        # Basic Password Validation
+        if password != confirm_password:
+            return "Passwords do not match!", 400
+
         try:
-            supabase.auth.sign_up({"email": email, "password": password})
-            return "Signup Success! Check your email and then Login."
+            # 1. Supabase Auth-la user create panrom
+            auth_res = supabase.auth.sign_up({"email": email, "password": password})
+            
+            if auth_res.user:
+                # 2. Auth success aana, 'users' table-la name details-ah insert panrom
+                # Inga Table-la 'first_name', 'last_name' columns irukanum
+                supabase.table('users').insert({
+                    "id": auth_res.user.id, # Auth ID match panna
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "email": email,
+                    "username": f"{first_name} {last_name}" # Combined name for profile
+                }).execute()
+
+                return "Signup Success! Check your email to verify, then Login."
+            
         except Exception as e:
+            print(f"Signup Error: {e}")
             return f"Signup failed: {str(e)}"
+
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
