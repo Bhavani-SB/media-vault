@@ -13,6 +13,7 @@
             --text-main: #202124;
             --text-sub: #5f6368;
             --danger-red: #d93025;
+            --border-color: #dadce0;
         }
 
         body {
@@ -20,13 +21,15 @@
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background-color: white;
             color: var(--text-main);
+            overflow: hidden;
         }
 
-        /* --- Header --- */
+        /* --- Header (Drive/Profile Style) --- */
         .header {
             height: 64px; padding: 0 16px;
             display: flex; align-items: center;
-            border-bottom: 1px solid #dadce0;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
             position: sticky; top: 0; background: white; z-index: 1000;
         }
 
@@ -49,14 +52,23 @@
         /* --- Layout --- */
         .main-wrapper { display: flex; height: calc(100vh - 65px); }
 
-        .sidebar { width: var(--sidebar-width); padding: 16px 8px; flex-shrink: 0; }
+        /* --- Sidebar (Profile Page Style) --- */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            padding: 16px 8px; 
+            flex-shrink: 0; 
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
 
-        .back-btn {
+         .back-btn {
             display: flex; align-items: center; gap: 12px;
             padding: 12px 24px; border-radius: 28px;
-            border: 1px solid #dadce0; background: white;
+            border: 1px solid var(--border-color); background: white;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;
-            margin-bottom: 20px; font-weight: 500; text-decoration: none; color: inherit;
+            margin: 0 0 20px 8px; font-weight: 500; text-decoration: none; color: inherit;
+            width: fit-content;
         }
 
         .nav-item {
@@ -68,44 +80,56 @@
         .nav-item.active { background: #feefee; color: var(--danger-red); font-weight: bold; }
 
         /* --- Content Area --- */
-        .content { flex-grow: 1; padding: 24px; overflow-y: auto; border-left: 1px solid #dadce0; }
+        .content { 
+            flex: 1; 
+            padding: 24px 32px; 
+            overflow-y: auto; 
+            background: var(--bg-color); 
+        }
 
         .trash-info-banner {
-            background-color: #f8f9fa; padding: 10px 20px; border-radius: 8px;
-            margin-bottom: 20px; font-size: 13px; color: var(--text-sub);
+            background-color: white; 
+            padding: 12px 20px; 
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px; 
+            font-size: 13px; color: var(--text-sub);
             display: flex; justify-content: space-between; align-items: center;
         }
 
         .empty-trash-btn {
-            color: var(--primary-blue); font-weight: 500; cursor: pointer; padding: 8px 16px;
+            color: var(--primary-blue); font-weight: 500; cursor: pointer; padding: 8px 16px; border-radius: 4px;
         }
+        .empty-trash-btn:hover { background: #e8f0fe; }
 
-        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
 
         /* Trash File Card */
         .file-card {
-            border: 1px solid #dadce0; border-radius: 8px;
-            overflow: visible; position: relative; opacity: 0.85;
+            background: white;
+            border: 1px solid var(--border-color); 
+            border-radius: 8px;
+            overflow: hidden; 
+            transition: box-shadow 0.2s;
         }
-        .file-card:hover { opacity: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .file-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
-        .file-preview { height: 100px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; }
+        .file-preview { height: 140px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative;}
 
         .file-details {
             padding: 12px; display: flex; justify-content: space-between;
             align-items: center; border-top: 1px solid #eee;
         }
 
-        .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+        .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
 
-        /* Context Menu */
         .more-btn { cursor: pointer; color: var(--text-sub); padding: 4px; border-radius: 50%; }
         .more-btn:hover { background: #eee; }
 
         .dropdown-menu {
-            display: none; position: absolute; right: 10px; top: 40px;
-            background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 8px; z-index: 1000; min-width: 180px; padding: 8px 0; border: 1px solid #eee;
+            display: none; position: absolute; background: white; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; 
+            z-index: 1000; min-width: 180px; padding: 8px 0; border: 1px solid #eee;
         }
 
         .dropdown-item {
@@ -114,92 +138,137 @@
             text-decoration: none; cursor: pointer;
         }
         .dropdown-item:hover { background-color: #f1f3f4; }
+
+        /* Storage Progress (Bottom Sidebar) */
+        .storage-container {
+            margin-top: auto; padding: 20px 16px; border-top: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
 
-    <header class="header">
-        <div class="logo">
-            <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
-            <span>Media Vault</span>
-        </div>
-        <div class="search-container">
-            <span class="material-icons" style="color: var(--text-sub);">search</span>
-            <input type="text" placeholder="Search in Trash">
-        </div>
-    </header>
-
-    <div class="main-wrapper">
-        <aside class="sidebar">
-            <a href="/" class="back-btn">
-                <span class="material-icons">arrow_back</span>
-                <span>Back to Drive</span>
-            </a>
-            
-            <nav>
-                <a href="/" class="nav-item"><span class="material-icons">folder</span> My Drive</a>
-                <a href="/shared" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
-                <a href="/starred" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
-                <a href="/trash" class="nav-item active"><span class="material-icons">delete_outline</span> Trash</a>
-            </nav>
-        </aside>
-
-        <main class="content">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="font-weight: 400; margin-top: 0;">Trash</h2>
-            </div>
-
-            <div class="trash-info-banner">
-                <span>Items in trash will be deleted forever after 30 days.</span>
-                {% if files %}
-                <div class="empty-trash-btn" onclick="return confirm('Empty entire trash? This cannot be undone!')">Empty Trash</div>
-                {% endif %}
-            </div>
-
-            <div class="file-grid">
-                {% for file in files %}
-                <div class="file-card">
-                    <div class="file-preview">
-                        <span class="material-icons" style="font-size: 48px; color: #dadce0;">insert_drive_file</span>
-                    </div>
-                    <div class="file-details">
-                        <span class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</span>
-                        <span class="material-icons more-btn" onclick="toggleMenu(event, 't-{{ file.id }}')">more_vert</span>
-
-                        <div id="t-{{ file.id }}" class="dropdown-menu">
-                            <a href="/restore/{{ file.id }}" class="dropdown-item">
-                                <span class="material-icons" style="color:#5f6368;">restore</span> Restore
-                            </a>
-                            <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
-                            <a href="/permanent_delete/{{ file.id }}/{{ file.file_name }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Intha file-ah permanent-a delete panna poringala?')">
-                                <span class="material-icons" style="color:var(--danger-red);">delete_forever</span> Delete Forever
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div style="grid-column: 1 / -1; text-align: center; margin-top: 100px;">
-                    <span class="material-icons" style="font-size: 80px; color: #f1f3f4;">delete</span>
-                    <p style="color: #5f6368;">Trash is empty</p>
-                </div>
-                {% endfor %}
-            </div>
-        </main>
+<header class="header">
+    <div class="logo">
+        <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
+        <span>Media Vault</span>
+    </div>
+    
+    <div class="search-container">
+        <span class="material-icons" style="color: var(--text-sub);">search</span>
+        <input type="text" placeholder="Search in Trash">
     </div>
 
-    <script>
-        function toggleMenu(event, id) {
-            event.stopPropagation();
-            document.querySelectorAll('.dropdown-menu').forEach(m => {
-                if(m.id !== id) m.style.display = 'none';
-            });
-            let menu = document.getElementById(id);
-            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-        }
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
+        
+        <a href="/profile" style="text-decoration: none;">
+    <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">
+        
+        {% if profile_pic %}
+            <img src="{{ profile_pic }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+        {% else %}
+            {{ session.get('user_email', 'U')[0].upper() }}
+        {% endif %}
+        
+    </div>
+</a>
+    </div>
+</header>
 
-        window.onclick = function() {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-        }
-    </script>
+<div class="main-wrapper">
+    <aside class="sidebar">
+        <a href="/" class="back-btn">
+            <span class="material-icons">arrow_back</span>
+            <span>Back to Drive</span>
+        </a>
+        
+        <nav>
+            <a href="/starred" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
+            <a href="/shared" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
+            <a href="/activity" class="nav-item"><span class="material-icons">history</span> Recent</a>
+            <a href="/trash" class="nav-item active"><span class="material-icons">delete_outline</span> Trash</a>           
+            <a href="/logout" class="nav-item" style="color: var(--danger-red);"><span class="material-icons">logout</span> Logout</a>
+        </nav>
+
+        <div style="margin-top: auto; padding: 20px 10px; border-top: 1px solid #eee; position: absolute; bottom: 0; width: 220px;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
+        <span class="material-icons" style="font-size: 16px;">cloud_queue</span>
+        <span>Storage ({{ usage|default(0)|round(2) }} MB of {{ quota|default(100) }} MB)</span>
+    </div>
+    <div style="width: 100%; height: 4px; background: #e8eaed; border-radius: 2px; overflow: hidden;">
+        {% set usage_val = usage|default(0) %}
+        {% set quota_val = quota|default(100) %}
+        {% set percent = (usage_val / quota_val) * 100 %}
+        <div style="width: {{ percent }}%; height: 100%; background: {{ '#ea4335' if percent > 90 else '#1a73e8' }}; transition: width 0.3s;"></div>
+    </div>
+</div>
+    </aside>
+
+    <main class="content">
+        <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 16px;">Trash</h2>
+
+        <div class="trash-info-banner">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="material-icons" style="font-size: 18px;">info_outline</span>
+                <span>Items in trash will be deleted forever after 30 days.</span>
+            </div>
+            {% if files %}
+            <div class="empty-trash-btn" onclick="if(confirm('Empty entire trash? This cannot be undone!')) window.location.href='/empty_trash';">Empty Trash</div>
+            {% endif %}
+        </div>
+
+        <div class="file-grid">
+            {% for file in files %}
+            <div class="file-card">
+                <div class="file-preview">
+                    {% if file.file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) %}
+                        <img src="{{ file.file_url }}" alt="Preview" style="width:100%; height:100%; object-fit:cover;">
+                    {% else %}
+                        <span class="material-icons" style="font-size: 48px; color: #dadce0;">insert_drive_file</span>
+                    {% endif %}
+                </div>
+                <div class="file-details">
+                    <span class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</span>
+                    <span class="material-icons more-btn" onclick="toggleMenu(event, 't-{{ file.id }}')">more_vert</span>
+
+                    <div id="t-{{ file.id }}" class="dropdown-menu">
+                        <a href="/restore/{{ file.id }}" class="dropdown-item">
+                            <span class="material-icons">restore</span> Restore
+                        </a>
+                        <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
+                        <a href="/permanent_delete/{{ file.id }}/{{ file.file_name }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Permanent-a delete panna poringala?')">
+                            <span class="material-icons" style="color:var(--danger-red);">delete_forever</span> Delete Forever
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; margin-top: 80px; color: #9aa0a6;">
+                <span class="material-icons" style="font-size: 64px; opacity: 0.3;">delete_outline</span>
+                <p>Trash is empty</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+
+<script>
+    function toggleMenu(event, id) {
+        event.stopPropagation();
+        document.querySelectorAll('.dropdown-menu').forEach(m => {
+            if(m.id !== id) m.style.display = 'none';
+        });
+        let menu = document.getElementById(id);
+        const rect = event.target.getBoundingClientRect();
+        menu.style.top = (rect.bottom + window.scrollY) + 'px';
+        menu.style.left = (rect.left - 150 + window.scrollX) + 'px';
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    window.onclick = function() {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    }
+</script>
 </body>
 </html>

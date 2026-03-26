@@ -80,6 +80,37 @@
         .storage-status {
             padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 25px;
         }
+         .back-btn {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 24px; border-radius: 28px;
+            border: 1px solid var(--border-color); background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;
+            margin: 0 0 20px 8px; font-weight: 500; text-decoration: none; color: inherit;
+            width: fit-content;
+        }
+        /* Dark Mode Toggle Switch */
+.switch {
+    position: relative; display: inline-block; width: 40px; height: 22px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s; border-radius: 34px;
+}
+.slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+    background-color: white; transition: .4s; border-radius: 50%;
+}
+input:checked + .slider { background-color: var(--primary-blue); }
+input:checked + .slider:before { transform: translateX(18px); }
+
+.bar-segment {
+    height: 100%;
+    transition: width 0.5s ease-in-out; /* Smooth-ah fill aagum */
+}
+.bg-img { background-color: #4285F4; } /* Blue */
+.bg-vid { background-color: #EA4335; } /* Red */
+.bg-doc { background-color: #FBBC05; } /* Yellow/Orange */
     </style>
 </head>
 <body>
@@ -102,13 +133,17 @@
 
 <div class="main-wrapper">
     <aside class="sidebar">
+          <a href="/" class="back-btn">
+            <span class="material-icons">arrow_back</span>
+            <span>Back to Drive</span>
+        </a>
         <nav style="margin-top: 10px;">
-            <a href="/" class="nav-item"><span class="material-icons">folder</span> My Drive</a>
+            
             <a href="/starred" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
             <a href="/shared" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
             <a href="/activity" class="nav-item"><span class="material-icons">history</span> Recent Activity</a>
             <a href="/trash" class="nav-item"><span class="material-icons">delete_outline</span> Trash</a>
-            <a href="/profile" class="nav-item active"><span class="material-icons">person</span> Profile</a>
+           
             <a href="/logout" class="nav-item" style="color: var(--danger-red);"><span class="material-icons">logout</span> Logout</a>
         </nav>
 
@@ -124,13 +159,46 @@
         </div>
     </aside>
 
-    <main class="content">
-        <div class="profile-card">
-            <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 25px;">Account Settings</h2>
+   <main class="content">
+    <div class="profile-card">
+        <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 25px;">Account Settings</h2>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+            <div style="text-align: center; flex: 1;">
+                <div style="position: relative; display: inline-block;">
+                    <div id="avatar-circle" style="width: 90px; height: 90px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 35px; font-weight: bold; margin: 0 auto; overflow: hidden;">
+                        {% if profile_pic %}
+                            <img src="{{ profile_pic }}" style="width:100%; height:100%; object-fit:cover;">
+                        {% else %}
+                            {{ user_email[0].upper() }}
+                        {% endif %}
+                    </div>
+                    <label for="avatar-upload" style="position: absolute; bottom: 0; right: 0; background: white; border-radius: 50%; padding: 6px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid #ddd; display: flex;">
+                        <span class="material-icons" style="font-size: 18px; color: var(--text-sub);">photo_camera</span>
+                        <input type="file" id="avatar-upload" style="display: none;" accept="image/*">
+                    </label>
+                </div>
+                <h3 style="margin: 10px 0 0 0; font-weight: 500;">{{ username if username else user_email.split('@')[0] }}</h3>
+            </div>
             
-            {% if message %}
-                <div class="alert alert-info">{{ message }}</div>
-            {% endif %}
+            <div style="display: flex; align-items: center; gap: 10px; background: #f1f3f4; padding: 8px 12px; border-radius: 20px;">
+                <span class="material-icons" style="font-size: 18px;">dark_mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        {% if message %}
+            <div class="alert alert-info">{{ message }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" value="{{ username }}" placeholder="Enter your name">
+            </div>
 
             <div class="form-group">
                 <label>Email Address</label>
@@ -138,30 +206,83 @@
             </div>
 
             <div class="storage-status">
-                <label style="margin-bottom: 10px;">Storage Details</label>
-                <p style="font-size: 13px; color: var(--text-sub); margin: 5px 0;">{{ usage|round(2) }} MB used of {{ quota }} MB total</p>
-                <div style="width: 100%; height: 8px; background: #dadce0; border-radius: 4px; margin-top: 10px;">
-                    <div style="width: {{ percent }}%; height: 100%; background: var(--primary-blue); border-radius: 4px;"></div>
+                <label style="margin-bottom: 10px;">Storage Breakdown</label>
+                <div style="width: 100%; height: 12px; background: #e8eaed; border-radius: 6px; margin: 15px 0; overflow: hidden; display: flex;">
+                   <div class="bar-segment bg-img" style="width: {{ img_pct }}%;" title="Images: {{ img_pct|round(1) }}%"></div>
+                   <div class="bar-segment bg-vid" style="width: {{ vid_pct }}%;" title="Videos: {{ vid_pct|round(1) }}%"></div>
+                   <div class="bar-segment bg-doc" style="width: {{ doc_pct }}%;" title="Docs: {{ doc_pct|round(1) }}%"></div>
+                </div>
+                <div style="display: flex; gap: 15px; font-size: 12px; color: var(--text-sub);">
+                    <span style="display:flex; align-items:center; gap:4px;"><small style="width:8px; height:8px; background:#4285F4; border-radius:50%"></small> Images</span>
+                    <span style="display:flex; align-items:center; gap:4px;"><small style="width:8px; height:8px; background:#EA4335; border-radius:50%"></small> Videos</span>
+                    <span style="display:flex; align-items:center; gap:4px;"><small style="width:8px; height:8px; background:#FBBC05; border-radius:50%"></small> Docs</span>
                 </div>
             </div>
 
-            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #dadce0;">
-
-            <h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 500;">Security</h4>
-            <form method="POST">
-                <div class="form-group">
-                    <label>New Password</label>
-                    <input type="password" name="new_password" required placeholder="Enter at least 6 characters">
-                </div>
-                <div class="form-group">
-                    <label>Confirm New Password</label>
-                    <input type="password" name="confirm_password" required placeholder="Re-type your password">
-                </div>
-                <button type="submit" class="btn-update">Update Password</button>
-            </form>
-        </div>
-    </main>
+           
+            
+            <button type="submit" class="btn-update">Save Profile Changes</button>
+        </form>
+    </div>
+</main>
 </div>
+<script>
+// 1. Unified Avatar Upload & Preview Logic
+document.getElementById('avatar-upload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // --- Instant Local Preview (UX-kaga) ---
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            document.getElementById('avatar-circle').innerHTML = 
+                `<img src="${event.target.result}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        };
+        reader.readAsDataURL(file);
 
+        // --- Permanent Backend Upload ---
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        fetch('/update_profile_pic', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.url) {
+                // Success: Backend URL-ah vachu image-ah confirm panrom
+                document.getElementById('avatar-circle').innerHTML = 
+                    `<img src="${data.url}?t=${new Date().getTime()}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                console.log("Profile picture saved to Supabase!");
+            } else {
+                alert("Upload failed: " + data.error);
+            }
+        })
+        .catch(err => {
+            console.error("Upload failed", err);
+            alert("Network error while uploading picture.");
+        });
+    }
+});
+
+// 2. Dark Mode Logic (Better Implementation)
+const darkToggle = document.getElementById('dark-mode-toggle');
+
+// Page load aagumpothu check pannuvom (Optional: LocalStorage-la irunthu edukalaam)
+darkToggle.addEventListener('change', () => {
+    if(darkToggle.checked) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        // Neenga CSS-la [data-theme='dark'] vachu styles ezhuthina romba smooth-ah irukkum
+        document.body.style.backgroundColor = "#0f172a"; // Deep Ocean / Professional Blue look
+        document.querySelector('.profile-card').style.backgroundColor = "#1e293b";
+        document.querySelector('.profile-card').style.color = "white";
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.body.style.backgroundColor = "#f8fafc";
+        document.querySelector('.profile-card').style.backgroundColor = "white";
+        document.querySelector('.profile-card').style.color = "#1e293b";
+    }
+});
+</script>
 </body>
 </html>

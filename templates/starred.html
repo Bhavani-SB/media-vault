@@ -1,3 +1,4 @@
+{% import 'icons.html' as icons %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +15,7 @@
             --text-sub: #5f6368;
             --danger-red: #ea4335;
             --star-gold: #f4b400;
+            --border-color: #dadce0;
         }
 
         body {
@@ -21,14 +23,15 @@
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background-color: white;
             color: var(--text-main);
+            overflow: hidden; /* Main scroll handles inner content */
         }
 
-        /* --- Header --- */
+        /* --- Header (Drive Style) --- */
         .header {
             height: 64px; padding: 0 16px;
             display: flex; align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #dadce0;
+            border-bottom: 1px solid var(--border-color);
             position: sticky; top: 0; background: white; z-index: 1000;
         }
 
@@ -48,38 +51,57 @@
             padding: 10px; font-size: 16px; outline: none;
         }
 
-        /* --- Main Layout --- */
+        /* --- Layout --- */
         .main-wrapper { display: flex; height: calc(100vh - 65px); }
 
-        .sidebar { width: var(--sidebar-width); padding: 16px 8px; flex-shrink: 0; border-right: 1px solid #dadce0; position: relative; }
+        .sidebar { 
+            width: var(--sidebar-width); 
+            padding: 16px 8px; 
+            flex-shrink: 0; 
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
 
         .nav-item {
             display: flex; align-items: center; gap: 15px;
             padding: 12px 20px; border-radius: 0 20px 20px 0;
             text-decoration: none; color: var(--text-main); font-size: 14px; margin-bottom: 4px;
         }
-
         .nav-item:hover { background: #f1f3f4; }
         .nav-item.active { background: #e8f0fe; color: var(--primary-blue); font-weight: bold; }
 
         /* --- Content Area --- */
-        .content { flex-grow: 1; padding: 24px; overflow-y: auto; }
+        .content { flex: 1; padding: 24px 32px; overflow-y: auto; background: var(--bg-color); }
 
         .file-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;
         }
 
         /* File Card Style */
         .file-card {
-            border: 1px solid #dadce0; border-radius: 8px;
-            overflow: visible; transition: 0.2s; position: relative;
+            background: white;
+            border: 1px solid var(--border-color); 
+            border-radius: 8px;
+            overflow: hidden; 
+            transition: box-shadow 0.2s;
+            position: relative;
         }
-        .file-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .file-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 
         .file-preview {
-            height: 120px; background: #f8f9fa;
+            height: 140px; background: #f8f9fa;
             display: flex; align-items: center; justify-content: center;
-            border-radius: 8px 8px 0 0;
+            position: relative;
+        }
+
+        .star-badge {
+            position: absolute; top: 8px; left: 8px; 
+            font-size: 18px; color: var(--star-gold);
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%; padding: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
         .file-details {
@@ -89,18 +111,24 @@
 
         .file-name {
             font-size: 13px; font-weight: 500; white-space: nowrap;
-            overflow: hidden; text-overflow: ellipsis; max-width: 120px;
+            overflow: hidden; text-overflow: ellipsis; max-width: 140px;
         }
 
-        /* --- Context Menu --- */
+        /* Context Menu */
         .more-btn { cursor: pointer; color: var(--text-sub); padding: 4px; border-radius: 50%; }
         .more-btn:hover { background: #eee; }
 
         .dropdown-menu {
-            display: none; position: absolute; right: 10px; top: 40px;
-            background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 8px; z-index: 1000; min-width: 170px; padding: 8px 0; border: 1px solid #eee;
-        }
+    display: none; 
+    position: fixed; /* Fixed is safer here */
+    background: white; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+    border-radius: 8px; 
+    z-index: 1001; 
+    min-width: 180px; 
+    padding: 8px 0; 
+    border: 1px solid #eee;
+}
 
         .dropdown-item {
             display: flex; align-items: center; gap: 12px;
@@ -108,124 +136,175 @@
             text-decoration: none; cursor: pointer;
         }
         .dropdown-item:hover { background-color: #f1f3f4; }
-        .dropdown-item .material-icons { font-size: 18px; color: #5f6368; }
-        
-        .starred-icon-active { color: var(--star-gold) !important; }
+        .dropdown-item .material-icons { font-size: 20px; color: #5f6368; }
+
+        /* Storage Section (Sidebar Bottom) */
+        .sidebar-footer {
+            margin-top: auto; padding: 20px 10px; border-top: 1px solid #eee; width: 220px;
+        }
+        .text-danger { color: var(--danger-red) !important; }
+.bg-danger { background-color: var(--danger-red) !important; }
+        .back-btn {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 24px; border-radius: 28px;
+            border: 1px solid var(--border-color); background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer;
+            margin: 0 0 20px 8px; font-weight: 500; text-decoration: none; color: inherit;
+            width: fit-content;
+        }
     </style>
 </head>
 <body>
 
-    <header class="header">
-        <div class="logo">
-            <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
-            <span>Media Vault</span>
-        </div>
-        <div class="search-container">
-            <span class="material-icons" style="color: var(--text-sub);">search</span>
-            <input type="text" placeholder="Search in starred">
-        </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
-            <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
-            <a href="/profile" title="Go to Profile" style="text-decoration: none; display: flex; align-items: center;">
-                <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;">
-                    {{ session.get('user_email', 'U')[0].upper() }}
-                </div>
-            </a>
-        </div>
-    </header>
-
-    <div class="main-wrapper">
-        <aside class="sidebar">
-            <nav style="margin-top: 10px;">
-                <a href="/" class="nav-item"><span class="material-icons">folder</span> My Drive</a>
-                <a href="/shared" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
-                <a href="/starred" class="nav-item active"><span class="material-icons">star</span> Starred</a>
-                <a href="/activity" class="nav-item"><span class="material-icons">history</span> Recent Activity</a>
-                <a href="/trash" class="nav-item"><span class="material-icons">delete_outline</span> Trash</a>
-            </nav>
-
-            <div style="margin-top: auto; padding: 20px 10px; border-top: 1px solid #eee; position: absolute; bottom: 0; width: 220px;">
-                <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
-                    <span class="material-icons" style="font-size: 16px;">cloud_queue</span>
-                    <span>Storage ({{ (usage or 0)|round(2) }} MB of {{ quota or 100 }} MB)</span>
-                </div>
-                <div style="width: 100%; height: 4px; background: #e8eaed; border-radius: 2px; overflow: hidden;">
-                    {% set percent = ((usage or 0)/(quota or 100))*100 %}
-                    <div style="width: {{ percent }}%; height: 100%; background: {{ '#ea4335' if percent > 90 else '#1a73e8' }}; transition: width 0.3s;"></div>
-                </div>
-            </div>
-        </aside>
-
-        <main class="content">
-            <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 24px;">Starred</h2>
-
-            <div class="file-grid">
-                {% for file in files %}
-                <div class="file-card">
-                    <div class="file-preview">
-                        {% if file.file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) %}
-                            <img src="{{ file.file_url }}" style="width:100%; height:100%; object-fit:cover; border-radius: 8px 8px 0 0;">
-                        {% else %}
-                            <span class="material-icons" style="font-size: 48px; color: #dadce0;">description</span>
-                        {% endif %}
-                        <span class="material-icons starred-icon-active" style="position: absolute; top: 8px; left: 8px; font-size: 20px; background: white; border-radius: 50%;">star</span>
-                    </div>
-                    <div class="file-details">
-                        <span class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</span>
-                        
-                        <span class="material-icons more-btn" onclick="toggleMenu(event, 'm-{{ file.id }}')">more_vert</span>
-
-                        <div id="m-{{ file.id }}" class="dropdown-menu">
-                            <a href="{{ file.file_url }}" target="_blank" class="dropdown-item">
-                                <span class="material-icons">visibility</span> Open
-                            </a>
-                            <a href="/toggle_star/{{ file.id }}" class="dropdown-item">
-                                <span class="material-icons starred-icon-active">star</span> Unstar
-                            </a>
-                            <a href="{{ file.file_url }}" download="{{ file.file_name }}" class="dropdown-item">
-                                <span class="material-icons">download</span> Download
-                            </a>
-                            <div class="dropdown-item" onclick="renameItem('{{ file.id }}', '{{ file.file_name }}')">
-                                <span class="material-icons">edit</span> Rename
-                            </div>
-                            <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
-                            <a href="/move_to_trash/{{ file.id }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Delete this starred file?')">
-                                <span class="material-icons" style="color:var(--danger-red);">delete</span> Move to Trash
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div style="grid-column: 1 / -1; text-align: center; margin-top: 100px;">
-                    <span class="material-icons" style="font-size: 80px; color: #f1f3f4;">star_border</span>
-                    <p style="color: #5f6368; font-size: 16px;">No starred files yet. Mark important files to see them here.</p>
-                </div>
-                {% endfor %}
-            </div>
-        </main>
+<header class="header">
+    <div class="logo">
+        <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
+        <span>Media Vault</span>
+    </div>
+    
+    <div class="search-container">
+        <span class="material-icons" style="color: var(--text-sub);">search</span>
+        <input type="text" placeholder="Search in starred">
     </div>
 
-    <script>
-        function toggleMenu(event, id) {
-            event.stopPropagation();
-            document.querySelectorAll('.dropdown-menu').forEach(m => {
-                if(m.id !== id) m.style.display = 'none';
-            });
-            let menu = document.getElementById(id);
-            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-        }
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
+        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
+      <a href="/profile" style="text-decoration: none;">
+    <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">
+        
+        {% if profile_pic %}
+            <img src="{{ profile_pic }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+        {% else %}
+            {{ session.get('user_email', 'U')[0].upper() }}
+        {% endif %}
+        
+    </div>
+</a>
+    </div>
+</header>
 
-        function renameItem(id, oldName) {
-            let newName = prompt("Rename file:", oldName);
-            if(newName && newName !== oldName) {
-                window.location.href = `/rename_file/${id}?new_name=${encodeURIComponent(newName)}`;
-            }
-        }
+<div class="main-wrapper">
+    <aside class="sidebar">
+        <a href="/" class="back-btn">
+            <span class="material-icons">arrow_back</span>
+            <span>Back to Drive</span>
+        </a>
+        <nav style="margin-top: 10px;">
+            <a href="/starred" class="nav-item active"><span class="material-icons" style="color: var(--primary-blue);">star</span> Starred</a>
+            <a href="/shared" class="nav-item"><span class="material-icons">people_outline</span> Shared with me</a>
+            <a href="/activity" class="nav-item"><span class="material-icons">history</span> Recent</a>
+            <a href="/trash" class="nav-item"><span class="material-icons">delete_outline</span> Trash</a>            
+            <a href="/logout" class="nav-item" style="color: var(--danger-red);">
+    <span class="material-icons" style="color: inherit;">logout</span> Logout
+</a>
+        </nav>
 
-        window.onclick = function() {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+        <div class="sidebar-footer">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); margin-bottom: 8px;">
+                <span class="material-icons" style="font-size: 16px;">cloud_queue</span>
+                <span>Storage ({{ usage|default(0)|round(2) }} MB of {{ quota|default(100) }} MB)</span>
+            </div>
+            <div style="width: 100%; height: 4px; background: #e8eaed; border-radius: 2px; overflow: hidden;">
+                {% set percent = ((usage|default(0))/(quota|default(100)))*100 %}
+                <div style="width: {{ percent }}%; height: 100%; background: {{ '#ea4335' if percent > 90 else '#1a73e8' }}; transition: width 0.3s;"></div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="content">
+        <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 24px;">Starred</h2>
+
+        <div class="file-grid">
+            {% for file in files %}
+            <div class="file-card">
+                         <div class="file-preview">
+    {{ icons.render_file_icon(file) }}
+
+    {% if file.is_starred %}
+        <span class="material-icons" style="position:absolute; top:8px; left:8px; color:#f4b400; font-size:18px;">star</span>
+    {% endif %}
+</div>
+                <div class="file-details">
+                    <span class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</span>
+                    <span class="material-icons more-btn" onclick="toggleMenu(event, 'm-{{ file.id }}')">more_vert</span>
+
+                    <div id="m-{{ file.id }}" class="dropdown-menu">
+                        <a href="{{ file.file_url }}" target="_blank" class="dropdown-item">
+                            <span class="material-icons">visibility</span> Open
+                        </a>
+                        <a href="/toggle_star/{{ file.id }}" class="dropdown-item" style="color: var(--danger-red);">   <span class="material-icons" style="color: var(--danger-red);">star_outline</span>  Unstar from here
+                         </a>
+                        <a href="{{ file.file_url }}" download="{{ file.file_name }}" class="dropdown-item">
+                            <span class="material-icons">download</span> Download
+                        </a>
+                        <div class="dropdown-item" onclick="renameItem('{{ file.id }}', '{{ file.file_name }}')">
+                            <span class="material-icons">edit</span> Rename
+                        </div>
+                        <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
+                        <a href="/move_to_trash/{{ file.id }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Delete this starred file?')">
+                            <span class="material-icons" style="color:var(--danger-red);">delete</span> Move to Trash
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; margin-top: 100px;">
+                <span class="material-icons" style="font-size: 80px; color: #e8eaed;">star_outline</span>
+                <p style="color: #5f6368; font-size: 16px;">No starred files yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+
+<script>
+   
+
+    function renameItem(id, oldName) {
+        let newName = prompt("Rename file:", oldName);
+        if(newName && newName !== oldName) {
+            window.location.href = `/rename_file/${id}?new_name=${encodeURIComponent(newName)}`;
         }
-    </script>
+    }
+function toggleMenu(event, id) {
+    // 1. Prevent parent clicks
+    event.stopPropagation();
+    
+    let menu = document.getElementById(id);
+    let isAlreadyOpen = menu.style.display === 'block';
+
+    // 2. Close all other open menus
+    document.querySelectorAll('.dropdown-menu').forEach(m => {
+        m.style.display = 'none';
+    });
+
+    // 3. If it wasn't open, open it now
+    if (!isAlreadyOpen) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        
+        // Positioning logic - using fixed to avoid overflow issues
+        menu.style.position = 'fixed'; 
+        menu.style.display = 'block';
+        
+        // Adjusting coordinates
+        menu.style.top = (rect.bottom + 5) + 'px';
+        menu.style.left = (rect.left - 150) + 'px';
+        menu.style.zIndex = "1001";
+    }
+}
+
+// Close menu when clicking anywhere else
+window.onclick = function(event) {
+    if (!event.target.matches('.more-btn')) {
+        document.querySelectorAll('.dropdown-menu').forEach(m => {
+            m.style.display = 'none';
+        });
+    }
+}
+    window.onclick = function() {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    }
+</script>
 </body>
 </html>
