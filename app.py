@@ -5,11 +5,11 @@ from dotenv import load_dotenv
 import urllib.parse
 from werkzeug.utils import secure_filename
 from flask_cors import CORS 
-from datetime import datetime
 import smtplib
 from email.message import EmailMessage
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
+import traceback
 
 load_dotenv()
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
@@ -28,6 +28,10 @@ key = os.getenv("SUPABASE_KEY")
 
 supabase: Client = create_client(url, key)
 
+scheduler = BackgroundScheduler()
+# Local-la test panna direct-ah start pannunga
+if not scheduler.running:
+    scheduler.start()
 # --- HELPER FUNCTIONS ---
 def get_current_user_email():
     return session.get('user_email')
@@ -77,22 +81,6 @@ def log_activity(user_id, action, details):
     except Exception as e:
         print(f"Logging Error: {e}")
 
-def send_expiry_alert(receiver_email, filename):
-    msg = EmailMessage()
-    msg['Subject'] = "Media Vault: File Expiry Alert! ⚠️"
-    msg['From'] = SENDER_EMAIL
-    msg['To'] = receiver_email
-    
-    body = f"Hii,\n\nThe file '{filename}' shared with you is about to expire (75% time completed). Please download it soon!\n\nTeam Media Vault"
-    msg.set_content(body)
-
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(SENDER_EMAIL, APP_PASSWORD)
-            smtp.send_message(msg)
-            print(f"Alert mail sent to {receiver_email}")
-    except Exception as e:
-        print(f"Mail Error: {e}")
 
 
 # --- ROUTES ---
@@ -550,53 +538,114 @@ def activity_view():
             profile_pic = user_res.data[0].get('profile_pic_url')
     return render_template('activity.html', logs=logs.data, usage=usage, quota=100, profile_pic=profile_pic)
 
+def send_expiry_alert(receiver_email, filename, share_id):
+    """Sends an email when 75% time is reached and updates DB status."""
+    try:
+        msg = EmailMessage()
+        msg['Subject'] = "⚠️ Media Vault: File Access Expiring Soon!"
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = receiver_email
+        msg.set_content(f"Hi,\n\nThe access for file '{filename}' will expire soon. Please download it if needed.\n\nRegards,\nMedia Vault Team")
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(SENDER_EMAIL, APP_PASSWORD)
+            smtp.send_message(msg)
+            print(f"SUCCESS: Alert mail sent to {receiver_email}")
+
+        # Update Supabase alert_sent status
+        supabase.table("file_shares").update({"alert_sent": True}).eq("id", share_id).execute()
+        
+    except Exception as e:
+        print(f"ERROR in send_expiry_alert: {e}")
+
+def delete_expired_share(share_id, filename):
+    """Automatically removes the share entry from Supabase at expiry time."""
+    try:
+        supabase.table("file_shares").delete().eq("id", share_id).execute()
+        print(f"CLEANUP: Access for {filename} (ID: {share_id}) removed from database.")
+    except Exception as e:
+        print(f"ERROR in delete_expired_share: {e}")
 
 
-# --- MODIFIED SHARE ROUTE ---
 @app.route('/share_file', methods=['POST'])
 def share_file():
     file_id = request.form.get('file_id')
     target_email = request.form.get('share_with_email')
     expires_at_str = request.form.get('expires_at') 
+    sender_email = session.get('user_email')
+
+    if not sender_email:
+        return "User not logged in", 401
 
     try:
-        # DB-la insert panra logic
+        # 1. Database-la share entry podurom
         share_data = {
             "file_id": file_id,
+            "sender_email": sender_email,
             "shared_with_email": target_email,
             "permission_type": "viewer",
-            "expires_at": expires_at_str 
+            "expires_at": expires_at_str,
+            "alert_sent": False
         }
-        supabase.table("file_shares").insert(share_data).execute()
-        
-        # --- AUTOMATIC MAIL LOGIC ---
-        if expires_at_str:
-            # Expiry time-ah datetime object-ah mathurathu
-            expiry_time = datetime.fromisoformat(expires_at_str)
-            now = datetime.now()
+        res = supabase.table("file_shares").insert(share_data).execute()
+        if not res.data:
+            raise Exception("Failed to insert into Supabase")
             
-            # Total duration calculate panni, athula 75% time kandupudikanum
+        new_share_id = res.data[0]['id']
+
+        # 2. AUTOMATIC LOGIC (Mail Alert + Auto Delete)
+        if expires_at_str:
+            # Date String-ah clean panni Seconds add panrom (Format Fix)
+            clean_date = expires_at_str.replace('T', ' ').replace('Z', '')
+            if len(clean_date) == 16: # If format is YYYY-MM-DD HH:MM
+                clean_date += ":00"
+            
+            expiry_time = datetime.strptime(clean_date[:19], '%Y-%m-%d %H:%M:%S')
+            now = datetime.now() # Local System Time
+            
             total_diff = (expiry_time - now).total_seconds()
-            alert_seconds = total_diff * 0.75
-            alert_time = now + timedelta(seconds=alert_seconds)
 
-            # Get filename for the mail
-            file_info = supabase.table("file_metadata").select("file_name").eq("id", file_id).single().execute()
-            filename = file_info.data['file_name']
+            if total_diff > 0:
+                # --- JOB 1: 75% Alert Mail ---
+                alert_seconds = total_diff * 0.75
+                alert_time = now + timedelta(seconds=alert_seconds)
 
-            # Scheduler-la task add panrathu
-            scheduler.add_job(
-                func=send_expiry_alert,
-                trigger='date',
-                run_date=alert_time,
-                args=[target_email, filename]
-            )
+                # File name fetch panrom
+                file_info = supabase.table("file_metadata").select("file_name").eq("id", file_id).single().execute()
+                filename = file_info.data['file_name'] if file_info.data else "a shared file"
 
-        log_activity(session['user_id'], "Shared File", f"Shared with: {target_email}")
+                print(f"DEBUG: Alert scheduled for {alert_time}")
+                scheduler.add_job(
+                    func=send_expiry_alert,
+                    trigger='date',
+                    run_date=alert_time,
+                    args=[target_email, filename, new_share_id],
+                    id=f"alert_{new_share_id}"
+                )
+
+                # --- JOB 2: 100% Auto-Delete ---
+                print(f"DEBUG: Auto-delete scheduled for {expiry_time}")
+                scheduler.add_job(
+                    func=delete_expired_share,
+                    trigger='date',
+                    run_date=expiry_time,
+                    args=[new_share_id, filename],
+                    id=f"delete_{new_share_id}"
+                )
+            else:
+                print("DEBUG: Expiry time is in the past!")
+
+        log_activity(session.get('user_id'), "Shared File", f"Shared with: {target_email}")
         return redirect(url_for('index'))
+        
     except Exception as e:
-        print(f"Error: {e}")
-        return "Sharing failed", 500
+        import traceback
+        print(f"CRITICAL ERROR: {traceback.format_exc()}")
+        return f"Sharing failed: {str(e)}", 500
+
+
+
+
 
 @app.route('/shared')
 def shared_with_me():
@@ -606,53 +655,52 @@ def shared_with_me():
     if not user_id or not user_email:
         return redirect('/login')
 
-    # 1. Calculate Storage (Ithu thaan sidebar-ku venum)
-    usage = get_storage_usage(user_id)
+    # 1. Sidebar Storage Usage
+    usage = get_storage_usage(user_id)# 2. Fetch Shared Files (Simplified with sender_email column)
+    # shared_with_me function-la indha change pannunga
+    now_str = datetime.now().isoformat()
 
-    # 2. Cleanup: Expired shares-ah delete pannunga
-    current_time = datetime.now().isoformat()
-    supabase.table("file_shares") \
-        .delete() \
-        .eq("shared_with_email", user_email) \
-        .lt("expires_at", current_time) \
-        .execute()
-
-    # 3 & 4. Fetch file metadata PLUS owner info using Joins
-    # Inga file_shares table-la irunthu file_metadata-vum, athula irunthu profiles (owner) edukurom
-    # 3. Get shared files
-    # 3. Get shared files and their metadata
     shared_res = supabase.table("file_shares") \
-        .select("*, file_metadata(*)") \
-        .eq("shared_with_email", user_email) \
-        .execute()
+    .select("*, file_metadata(*)") \
+    .eq("shared_with_email", user_email) \
+    .gt("expires_at", now_str) \
+    .execute()
 
     files = []
-    for item in shared_res.data:
+    if shared_res.data:
+     for item in shared_res.data:
+        # file_metadata-la join aagi vara data-va edukirom
         file_info = item.get('file_metadata')
+        
         if file_info:
-            # Carry over sharing-specific info to the file object
+            # 1. Share table-la irukura expiry time-ah merge panrom
             file_info['expires_at'] = item.get('expires_at')
             
-            # Use 'sender_email' if it exists in your file_shares table
-            # Otherwise, we'll handle the naming in the template
-            file_info['owner_email'] = item.get('sender_email') 
+            # 2. Permission type (viewer/editor) edukirom
+            file_info['permission'] = item.get('permission_type')
             
-            # Ensure we have the ID for the dropdown menu
+            # 3. Ippo unga table-la 'sender_email' column irukkuradhala 
+            # direct-a andha value-vaiye owner_email-nu template-ku anuppalaam
+            file_info['owner_email'] = item.get('sender_email') or "Unknown Sender"
+            
+            # ID check (for dropdown actions)
             file_info['id'] = file_info.get('id')
             
             files.append(file_info)
-    user_email = session.get('user_email')
-    profile_pic = None
+
     
-    if user_email:
-        # Database-la irunthu profile pic URL-ah edukkirom
-        user_res = supabase.table('users').select("profile_pic_url").eq("email", user_email).execute()
-        if user_res.data:
-            profile_pic = user_res.data[0].get('profile_pic_url')
+    # 3. Sidebar Profile Pic
+    profile_pic = None
+    user_res = supabase.table('users').select("profile_pic_url").eq("email", user_email).execute()
+    if user_res.data:
+        profile_pic = user_res.data[0].get('profile_pic_url')
+
     return render_template('shared.html', 
                            files=files, 
                            usage=usage, 
-                           quota=100, profile_pic=profile_pic)
+                           quota=100, 
+                           profile_pic=profile_pic)
+
 @app.route('/folder/<folder_id>')
 def view_folder(folder_id):
     user_id = session.get('user_id')
@@ -679,6 +727,7 @@ def view_folder(folder_id):
                            files=folder_files.data, 
                            current_folder_id=folder_id,
                            current_folder_name=current_folder.data['name'])
+
 
 
 @app.route('/search')
@@ -736,14 +785,8 @@ def delete_folder(folder_id):
     log_activity(session['user_id'], "Deleted Folder", f"Folder ID: {folder_id}")
     
     return redirect(request.referrer or url_for('index'))
-scheduler = BackgroundScheduler()
 
-def start_scheduler():
-    if not scheduler.running:
-        scheduler.start()
-
-# Only start scheduler in Render (production)
-if os.environ.get("RENDER") or os.environ.get("PORT"):
+# Only start scheduler in Render (production)if os.environ.get("RENDER") or os.environ.get("PORT"):
     start_scheduler()
 
 if __name__ == '__main__':
