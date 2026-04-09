@@ -14,20 +14,12 @@ import traceback
 load_dotenv()
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
-# --- MAIL CONFIG & FUNCTION ---
- # Google App Password
-
-
-
-
 app = Flask(__name__)
 CORS(app)
 app.secret_key = "230525"
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
-
 supabase: Client = create_client(url, key)
-
 scheduler = BackgroundScheduler()
 # Local-la test panna direct-ah start pannunga
 if not scheduler.running:
@@ -99,6 +91,7 @@ def get_breadcrumbs(folder_id):
 @app.route('/')
 @app.route('/folder/<int:folder_id>')
 def index(folder_id=None):
+    run_global_cleanup()
     if 'user_id' not in session: 
         return redirect(url_for('login'))
     
@@ -566,7 +559,15 @@ def delete_expired_share(share_id, filename):
     except Exception as e:
         print(f"ERROR in delete_expired_share: {e}")
 
-
+def run_global_cleanup():
+    try:
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # Database-la 'expires_at' ippo irukura time-vida kammiya irundha delete pannu
+        supabase.table("file_shares").delete().lt("expires_at", now_str).execute()
+        print(f"🔥 GLOBAL CLEANUP: Executed at {now_str}")
+    except Exception as e:
+        print(f"Cleanup Error: {e}")
+        
 @app.route('/share_file', methods=['POST'])
 def share_file():
     file_id = request.form.get('file_id')
@@ -578,6 +579,16 @@ def share_file():
         return "User not logged in", 401
 
     try:
+        # --- [STEP 0: LIVE CLEANUP LOGIC] ---
+        # Pudhu file share panra gap-la, pazhaya expired files-ah thookiduroom
+        try:
+            now_for_cleanup = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            supabase.table("file_shares").delete().lt("expires_at", now_for_cleanup).execute()
+            print(f"DEBUG: Cleanup completed before new share at {now_for_cleanup}")
+        except Exception as cleanup_err:
+            print(f"Cleanup Error (Ignored): {cleanup_err}")
+        # ------------------------------------
+
         # 1. Database-la share entry podurom
         share_data = {
             "file_id": file_id,
@@ -588,20 +599,20 @@ def share_file():
             "alert_sent": False
         }
         res = supabase.table("file_shares").insert(share_data).execute()
+        
         if not res.data:
             raise Exception("Failed to insert into Supabase")
             
         new_share_id = res.data[0]['id']
 
-        # 2. AUTOMATIC LOGIC (Mail Alert + Auto Delete)
+        # 2. AUTOMATIC LOGIC (Mail Alert + Auto Delete Scheduler)
         if expires_at_str:
-            # Date String-ah clean panni Seconds add panrom (Format Fix)
             clean_date = expires_at_str.replace('T', ' ').replace('Z', '')
-            if len(clean_date) == 16: # If format is YYYY-MM-DD HH:MM
+            if len(clean_date) == 16:
                 clean_date += ":00"
             
             expiry_time = datetime.strptime(clean_date[:19], '%Y-%m-%d %H:%M:%S')
-            now = datetime.now() # Local System Time
+            now = datetime.now()
             
             total_diff = (expiry_time - now).total_seconds()
 
@@ -610,7 +621,6 @@ def share_file():
                 alert_seconds = total_diff * 0.75
                 alert_time = now + timedelta(seconds=alert_seconds)
 
-                # File name fetch panrom
                 file_info = supabase.table("file_metadata").select("file_name").eq("id", file_id).single().execute()
                 filename = file_info.data['file_name'] if file_info.data else "a shared file"
 
@@ -623,7 +633,7 @@ def share_file():
                     id=f"alert_{new_share_id}"
                 )
 
-                # --- JOB 2: 100% Auto-Delete ---
+                # --- JOB 2: 100% Auto-Delete (Works if server is awake) ---
                 print(f"DEBUG: Auto-delete scheduled for {expiry_time}")
                 scheduler.add_job(
                     func=delete_expired_share,
@@ -642,7 +652,6 @@ def share_file():
         import traceback
         print(f"CRITICAL ERROR: {traceback.format_exc()}")
         return f"Sharing failed: {str(e)}", 500
-
 
 
 
