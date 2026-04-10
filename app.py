@@ -660,7 +660,18 @@ def run_global_cleanup():
         print(f"🔥 GLOBAL CLEANUP: Executed at {now_str}")
     except Exception as e:
         print(f"Cleanup Error: {e}")
-        
+
+
+@app.route('/delete_expired_file/<file_id>', methods=['POST'])
+def delete_expired_file(file_id):
+    # 1. Delete from Supabase
+    response = supabase.table("media_vault").delete().eq("id", file_id).execute()
+    
+    # 2. (Optional) Delete the actual file from Supabase Storage bucket
+    # supabase.storage.from_('vault').remove([f"{file_id}_filename.ext"])
+    
+    return {"status": "success", "message": "File deleted from DB"}, 200
+
 @app.route('/share_file', methods=['POST'])
 def share_file():
     file_id = request.form.get('file_id')
@@ -756,55 +767,59 @@ def share_file():
 def shared_with_me():
     user_id = session.get('user_id')
     user_email = session.get('user_email')
-
     if not user_id or not user_email:
         return redirect('/login')
 
-    # 1. Sidebar Storage Usage
-    usage = get_storage_usage(user_id)# 2. Fetch Shared Files (Simplified with sender_email column)
-    # shared_with_me function-la indha change pannunga
+    usage = get_storage_usage(user_id)
     now_str = datetime.now().isoformat()
 
-    shared_res = supabase.table("file_shares") \
-    .select("*, file_metadata(*)") \
-    .eq("shared_with_email", user_email) \
-    .gt("expires_at", now_str) \
-    .execute()
+    # Get the list of files
+    shared_res = supabase.table("file_shares").select("*, file_metadata(*)").eq("shared_with_email", user_email).gt("expires_at", now_str).execute()
 
     files = []
     if shared_res.data:
-     for item in shared_res.data:
-        # file_metadata-la join aagi vara data-va edukirom
-        file_info = item.get('file_metadata')
-        
-        if file_info:
-            # 1. Share table-la irukura expiry time-ah merge panrom
-            file_info['expires_at'] = item.get('expires_at')
-            
-            # 2. Permission type (viewer/editor) edukirom
-            file_info['permission'] = item.get('permission_type')
-            
-            # 3. Ippo unga table-la 'sender_email' column irukkuradhala 
-            # direct-a andha value-vaiye owner_email-nu template-ku anuppalaam
-            file_info['owner_email'] = item.get('sender_email') or "Unknown Sender"
-            
-            # ID check (for dropdown actions)
-            file_info['id'] = file_info.get('id')
-            
-            files.append(file_info)
+        for item in shared_res.data:
+            file_info = item.get('file_metadata')
+            if file_info:
+                file_info['expires_at'] = item.get('expires_at')
+                file_info['permission'] = item.get('permission_type')
+                file_info['owner_email'] = item.get('sender_email') or "Unknown"
+                file_info['id'] = file_info.get('id')
+                files.append(file_info)
 
-    
-    # 3. Sidebar Profile Pic
+    # Profile Pic logic
     profile_pic = None
     user_res = supabase.table('users').select("profile_pic_url").eq("email", user_email).execute()
     if user_res.data:
         profile_pic = user_res.data[0].get('profile_pic_url')
 
+    # Note: file=None and seconds_remaining=0 prevent Jinja errors on the list page
     return render_template('shared.html', 
                            files=files, 
                            usage=usage, 
                            quota=100, 
-                           profile_pic=profile_pic)
+                           profile_pic=profile_pic,
+                           file=None, 
+                           seconds_remaining=0)
+
+@app.route('/shared/<share_id>')
+def view_shared_file(share_id):
+    # Fetch just this one specific share
+    res = supabase.table("file_shares").select("*, file_metadata(*)").eq("id", share_id).single().execute()
+    share_data = res.data
+
+    if not share_data:
+        return "File not found or link expired", 404
+
+    # Calculate remaining time
+    clean_date = share_data['expires_at'].replace('T', ' ').replace('Z', '')
+    expiry_time = datetime.strptime(clean_date[:19], '%Y-%m-%d %H:%M:%S')
+    total_diff = (expiry_time - datetime.now()).total_seconds()
+
+    return render_template('shared.html', 
+                           file=share_data, 
+                           seconds_remaining=total_diff,
+                           files=[]) # Empty list because we are looking at one file
 
 @app.route('/folder/<folder_id>')
 def view_folder(folder_id):

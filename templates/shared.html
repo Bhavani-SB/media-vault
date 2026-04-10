@@ -26,7 +26,6 @@
             overflow: hidden;
         }
 
-        /* --- Header --- */
         .header {
             height: 64px; padding: 0 16px;
             display: flex; align-items: center;
@@ -51,7 +50,6 @@
             padding: 10px; font-size: 16px; outline: none;
         }
 
-        /* --- Layout --- */
         .main-wrapper { display: flex; height: calc(100vh - 65px); }
 
         .sidebar { 
@@ -71,7 +69,6 @@
         .nav-item:hover { background: #f1f3f4; }
         .nav-item.active { background: #e8f0fe; color: var(--primary-blue); font-weight: bold; }
 
-        /* --- Content Area --- */
         .content { flex: 1; padding: 24px 32px; overflow-y: auto; background: var(--bg-color); }
 
         .file-grid {
@@ -83,7 +80,7 @@
             border: 1px solid var(--border-color); 
             border-radius: 12px;
             overflow: hidden; 
-            transition: 0.2s;
+            transition: all 0.5s ease;
             position: relative;
         }
         .file-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: var(--primary-blue); }
@@ -105,22 +102,14 @@
             font-size: 14px; font-weight: 500; white-space: nowrap;
             overflow: hidden; text-overflow: ellipsis; max-width: 150px;
         }
-.owner-badge {
-    font-size: 11px;
-    color: var(--text-sub);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 4px;
-    /* Inga irukura lines email-ah neat-ah cut pannum (...) */
-    white-space: nowrap;
-    
-    text-overflow: ellipsis;
-    max-width: 180px; 
-}
 
-        /* Expiry & Alert Tags */
-        .status-tags { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+        .owner-badge {
+            font-size: 11px; color: var(--text-sub);
+            display: flex; align-items: center; gap: 4px; margin-top: 4px;
+            white-space: nowrap; text-overflow: ellipsis; max-width: 180px; 
+        }
+
+        .status-tags { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; padding: 0 12px 12px;}
         .tag {
             display: inline-flex; align-items: center; gap: 5px;
             font-size: 11px; font-weight: 500; padding: 4px 8px; border-radius: 4px;
@@ -128,20 +117,12 @@
         .expiry-tag { background: #fce8e6; color: var(--danger-red); }
         .alert-tag { background: #e6f4ea; color: var(--success-green); }
 
-        /* Dropdown */
         .dropdown-menu {
-    display: none; 
-    position: absolute; /* Idhu card kulla irukanum */
-    right: 10px;        /* Right side la align aaga */
-    top: 40px;          /* 3 dots-ku kela vara */
-    background: white; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
-    border-radius: 8px; 
-    z-index: 1000; 
-    min-width: 180px; 
-    padding: 8px 0; 
-    border: 1px solid #eee;
-}
+            display: none; position: absolute; right: 10px; top: 40px;
+            background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            border-radius: 8px; z-index: 1000; min-width: 180px; 
+            padding: 8px 0; border: 1px solid #eee;
+        }
 
         .dropdown-item {
             display: flex; align-items: center; gap: 12px;
@@ -171,25 +152,21 @@
         <span class="material-icons" style="color: #4285F4; font-size: 30px;">cloud</span>
         <span>Media Vault</span>
     </div>
-    
     <div class="search-container">
         <span class="material-icons" style="color: var(--text-sub);">search</span>
         <input type="text" placeholder="Search shared files">
     </div>
-
     <div style="display: flex; align-items: center; gap: 15px;">
         <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
-       <a href="/profile" style="text-decoration: none;">
-    <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">
-        
-        {% if profile_pic %}
-            <img src="{{ profile_pic }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
-        {% else %}
-            {{ session.get('user_email', 'U')[0].upper() }}
-        {% endif %}
-        
-    </div>
-</a>
+        <a href="/profile" style="text-decoration: none;">
+            <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">
+                {% if profile_pic %}
+                    <img src="{{ profile_pic }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    {{ session.get('user_email', 'U')[0].upper() }}
+                {% endif %}
+            </div>
+        </a>
     </div>
 </header>
 
@@ -200,7 +177,7 @@
             <span>Back to Drive</span>
         </a>
         <nav style="margin-top: 10px;">
-             <a href="/starred" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
+            <a href="/starred" class="nav-item"><span class="material-icons">star_border</span> Starred</a>
             <a href="/shared" class="nav-item active"><span class="material-icons" style="color: var(--primary-blue);">people_outline</span> Shared with me</a>           
             <a href="/activity" class="nav-item"><span class="material-icons">history</span> Recent</a>
             <a href="/trash" class="nav-item"><span class="material-icons">delete_outline</span> Trash</a>  
@@ -222,67 +199,57 @@
     <main class="content">
         <h2 style="font-weight: 400; margin-top: 0; margin-bottom: 24px;">Shared with me</h2>
 
-        <div class="file-grid">
+        <div class="file-grid" id="main-file-grid">
             {% for file in files %}
-            <div class="file-card">
-               <div class="file-preview">
-    {# This calls your macro from icons.html #}
-    {{ icons.render_file_icon(file) }}
-</div>
+            <div class="file-card" id="file-row-{{ file.id }}"> 
+                <div class="file-preview">
+                    {{ icons.render_file_icon(file) }}
+                </div>
 
-<div class="file-details">
-    <div class="file-info-header">
-        <div>
-            <div class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</div>
-           <div class="owner-badge">
-    <span class="material-icons" style="font-size: 12px;">account_circle</span>
-    {# Email irundha full email-ah kaatuvom, illana 'Unknown Sender' #}
-    {% if file.owner_email %}
-        {{ file.owner_email }}
-    {% else %}
-        No Email Found
-    {% endif %}
-</div>
-        </div>
-        <span class="material-icons more-btn" onclick="toggleMenu(event, 'm-{{ file.id }}')">more_vert</span>
-    </div>
-</div>
-    
-                
-            
-
-                    <div class="status-tags">
-                        {% if file.expires_at %}
-                        <div class="tag expiry-tag">
-                            <span class="material-icons" style="font-size: 14px;">timer</span>
-                            Expires: {{ file.expires_at[:10] }} {{ file.expires_at[11:16] }}
+                <div class="file-details">
+                    <div class="file-info-header">
+                        <div>
+                            <div class="file-name" title="{{ file.file_name }}">{{ file.file_name }}</div>
+                            <div class="owner-badge">
+                                <span class="material-icons" style="font-size: 12px;">account_circle</span>
+                                {% if file.owner_email %}{{ file.owner_email }}{% else %}No Email Found{% endif %}
+                            </div>
                         </div>
-                        {% endif %}
-
-                        {% if file.alert_sent %}
-                        <div class="tag alert-tag">
-                            <span class="material-icons" style="font-size: 14px;">notifications_active</span>
-                            Storage Alert Sent
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div id="m-{{ file.id }}" class="dropdown-menu">
-                        <a href="{{ file.file_url }}" target="_blank" class="dropdown-item">
-                            <span class="material-icons">visibility</span> Open / Preview
-                        </a>
-                        <a href="{{ file.file_url }}" download="{{ file.file_name }}" class="dropdown-item">
-                            <span class="material-icons">download</span> Download
-                        </a>
-                        {% if file.permission == 'editor' %}
-                        <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
-                        <a href="/remove_shared/{{ file.id }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Remove this file from your shared list?')">
-                            <span class="material-icons" style="color:var(--danger-red);">link_off</span> Remove Access
-                        </a>
-                        {% endif %}
+                        <span class="material-icons more-btn" style="cursor:pointer" onclick="toggleMenu(event, 'm-{{ file.id }}')">more_vert</span>
                     </div>
                 </div>
-            
+
+                <div class="status-tags">
+                    {% if file.expires_at %}
+                    <div class="tag expiry-tag">
+                        <span class="material-icons" style="font-size: 14px;">timer</span>
+                        Expires: {{ file.expires_at[:10] }} {{ file.expires_at[11:16] }}
+                    </div>
+                    {% endif %}
+
+                    {% if file.alert_sent %}
+                    <div class="tag alert-tag">
+                        <span class="material-icons" style="font-size: 14px;">notifications_active</span>
+                        Storage Alert Sent
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div id="m-{{ file.id }}" class="dropdown-menu">
+                    <a href="{{ file.file_url }}" target="_blank" class="dropdown-item">
+                        <span class="material-icons">visibility</span> Open / Preview
+                    </a>
+                    <a href="{{ file.file_url }}" download="{{ file.file_name }}" class="dropdown-item">
+                        <span class="material-icons">download</span> Download
+                    </a>
+                    {% if file.permission == 'editor' %}
+                    <hr style="border:0; border-top:1px solid #eee; margin:4px 0;">
+                    <a href="/remove_shared/{{ file.id }}" class="dropdown-item" style="color:var(--danger-red)" onclick="return confirm('Remove this file from your shared list?')">
+                        <span class="material-icons" style="color:var(--danger-red);">link_off</span> Remove Access
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
             {% else %}
             <div style="grid-column: 1 / -1; text-align: center; margin-top: 100px;">
                 <span class="material-icons" style="font-size: 80px; color: #e8eaed;">people_outline</span>
@@ -294,26 +261,21 @@
 </div>
 
 <script>
-  function toggleMenu(event, id) {
-    event.stopPropagation();
-    
-    // Vera yedhavadhu menu open-la irundha close panna
-    document.querySelectorAll('.dropdown-menu').forEach(m => {
-        if(m.id !== id) m.style.display = 'none';
-    });
-
-    let menu = document.getElementById(id);
-    // Just toggle display
-    if (menu.style.display === 'block') {
-        menu.style.display = 'none';
-    } else {
-        menu.style.display = 'block';
+    function toggleMenu(event, id) {
+        event.stopPropagation();
+        document.querySelectorAll('.dropdown-menu').forEach(m => {
+            if(m.id !== id) m.style.display = 'none';
+        });
+        let menu = document.getElementById(id);
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
     }
-}
 
     window.onclick = function() {
         document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
     }
+
+    
+</script>
 </script>
 </body>
 </html>
