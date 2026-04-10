@@ -352,17 +352,17 @@
 
                     <div id="f-{{ file.id }}" class="dropdown-menu">
                         <a href="{{ file.file_url }}" target="_blank" class="dropdown-item">
-                            <span class="material-icons">visibility</span> Preview
-                        </a>
+    <span class="material-icons">visibility</span> Preview
+</a>
                         <div class="dropdown-item" onclick="openShareModal('{{ file.id }}', '{{ file.file_name }}')">
                             <span class="material-icons">person_add</span> Share
                         </div>
                         <a href="/toggle_star/{{ file.id }}" class="dropdown-item">
                             <span class="material-icons">{{ 'star' if file.is_starred else 'star_border' }}</span> Star
                         </a>
-                        <a href="{{ file.file_url }}" download class="dropdown-item">
-                            <span class="material-icons">download</span> Download
-                        </a>
+                        <a href="{{ file.file_url }}?download=" class="dropdown-item">
+    <span class="material-icons">download</span> Download
+</a>
                         <div class="dropdown-item" onclick="renameItem('file', '{{ file.id }}', '{{ file.file_name }}')">
                             <span class="material-icons">edit</span> Rename
                         </div>

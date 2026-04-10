@@ -10,6 +10,11 @@ from email.message import EmailMessage
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import traceback
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+import mimetypes
+# Brevo Setup
+
 
 load_dotenv()
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
@@ -21,6 +26,8 @@ url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 scheduler = BackgroundScheduler()
+configuration = sib_api_v3_sdk.Configuration()
+configuration.api_key['api-key'] = os.getenv("BREVO_API_KEY")
 # Local-la test panna direct-ah start pannunga
 if not scheduler.running:
     scheduler.start()
@@ -331,14 +338,31 @@ def login():
         password = request.form.get('password')
         try:
             res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            
             session['user_id'] = res.user.id
             session['user_email'] = res.user.email
+            
+            # --- NAME FETCH LOGIC (USING EMAIL) ---
+            # ID mathiri illaama, Email eppovumae unique-ah sync aagum
+            user_query = supabase.table('users').select('username').eq('email', email).execute()
+            
+            if user_query.data and len(user_query.data) > 0:
+                session['user_name'] = user_query.data[0].get('username')
+                print(f"✅ SESSION SET SUCCESS: {session['user_name']}")
+            else:
+                # Oru vela Table-la row-ae illana fallback
+                session['user_name'] = email.split('@')[0]
+                print(f"⚠️ WARNING: No user found for email {email}. Using prefix.")
+            # --------------------------------------
+
             log_activity(res.user.id, "Login", "User logged into the system")
             return redirect(url_for('index'))
+            
         except Exception as e:
-            return f"Login failed: {str(e)}"
-    return render_template('login.html')
+            print(f"❌ Login Error: {e}")
+            return render_template('login.html', error=str(e))
 
+    return render_template('login.html')
 @app.route('/logout')
 def logout():
     if 'user_id' in session:
@@ -347,6 +371,8 @@ def logout():
     return redirect(url_for('login'))
 
 # --- FILE OPERATIONS ---
+import mimetypes # Intha line-ah mela add pannunga
+
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'user_id' not in session: return redirect(url_for('login'))
@@ -357,6 +383,11 @@ def upload():
     
     if file:
         safe_name = secure_filename(file.filename)
+        # 1. MIME Type kandupidi-kalam
+        mime_type, _ = mimetypes.guess_type(safe_name)
+        if not mime_type:
+            mime_type = 'application/octet-stream' # Safe fallback
+
         file_content = file.read()
         
         # 1. Quota Check (Existing)
@@ -364,42 +395,44 @@ def upload():
         if usage + (len(file_content)/(1024*1024)) > 100:
             return "Quota Exceeded", 403
 
-        # 2. Check if file already exists (Versioning Logic)
+        # 2. Versioning Logic (Same as yours)
         existing_file = supabase.table("file_metadata").select("*").eq("user_id", user_id).eq("file_name", safe_name).eq("is_deleted", False).execute()
 
         if existing_file.data:
-            # IT'S A NEW VERSION
             file_id = existing_file.data[0]['id']
-            # Get latest version number
             versions = supabase.table("file_versions").select("version_number").eq("file_id", file_id).order("version_number", desc=True).limit(1).execute()
             next_version = (versions.data[0]['version_number'] + 1) if versions.data else 2
-            
-            # Save with version suffix in storage
             file_path = f"{user_id}/v{next_version}_{safe_name}"
         else:
-            # IT'S A NEW FILE
             file_id = None
             next_version = 1
             file_path = f"{user_id}/{safe_name}"
 
-        # 3. Upload to Storage
-        supabase.storage.from_("files").upload(path=file_path, file=file_content, file_options={"upsert": "true"})
+        # 3. Upload to Storage with CONTENT-TYPE
+        # Ithu thaan Preview-ku help pannum
+        supabase.storage.from_("files").upload(
+            path=file_path, 
+            file=file_content, 
+            file_options={
+                "upsert": "true",
+                "content-type": mime_type # FIXED: Browser ippo file type-ah read pannidum
+            }
+        )
+        
         file_url = supabase.storage.from_("files").get_public_url(file_path)
 
+        # 4. Metadata and Version Recording (Same as yours)
         if not file_id:
-            # Insert new metadata
             res = supabase.table("file_metadata").insert({
                 "file_name": safe_name, "file_url": file_url, "file_size": len(file_content),
                 "user_id": user_id, "folder_id": int(folder_id) if folder_id else None
             }).execute()
             file_id = res.data[0]['id']
         else:
-            # Update existing metadata to point to latest
             supabase.table("file_metadata").update({
                 "file_url": file_url, "file_size": len(file_content)
             }).eq("id", file_id).execute()
 
-        # 4. Record the Version
         supabase.table("file_versions").insert({
             "file_id": file_id, "version_number": next_version,
             "storage_key": file_path, "file_url": file_url, "size_bytes": len(file_content)
@@ -408,6 +441,7 @@ def upload():
         log_activity(user_id, "Uploaded File", f"{safe_name} (v{next_version})")
 
     return redirect(request.referrer or url_for('index'))
+
 
 @app.route('/create_folder', methods=['POST'])
 def create_folder():
@@ -513,7 +547,6 @@ def starred_view():
                            usage=usage, 
                            quota=100,
                            profile_pic=profile_pic)
-
                          
 @app.route('/activity')
 def activity_view():
@@ -531,25 +564,85 @@ def activity_view():
             profile_pic = user_res.data[0].get('profile_pic_url')
     return render_template('activity.html', logs=logs.data, usage=usage, quota=100, profile_pic=profile_pic)
 
-def send_expiry_alert(receiver_email, filename, share_id):
-    """Sends an email when 75% time is reached and updates DB status."""
+def send_initial_share_mail(target_email, filename, sender_name, expiry_time_str):
+    """Sends a professional notification as soon as a file is shared."""
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    
+    # Format expiry for the email: '2026-04-15T14:30' -> '2026-04-15 14:30'
+    display_expiry = expiry_time_str.replace('T', ' ')
+
+    subject = f"📁 {sender_name} shared a file with you on Media Vault"
+    html_content = f"""
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+            <h2 style="color: #2c3e50;">New File Shared!</h2>
+            <p>Hi,</p>
+            <p><strong>{sender_name}</strong> has shared a new file with you via Media Vault.</p>
+            <div style="background-color: #f9f9f9; padding: 15px; border-left: 5px solid #3498db; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>File Name:</strong> {filename}</p>
+                <p style="margin: 5px 0;"><strong>Expires On:</strong> <span style="color: #e74c3c; font-weight: bold;">{display_expiry}</span></p>
+            </div>
+            <p>Please log in to your dashboard to view or download the file before the access expires.</p>
+            <br>
+            <p>Best Regards,<br><strong>Media Vault Team</strong></p>
+        </div>
+    """
+    
+    # Use your verified personal Gmail here
+    sender = {"name": "Media Vault", "email": "sb.bhavani.sb@gmail.com"}
+    
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=[{"email": target_email}],
+        sender=sender,
+        subject=subject,
+        html_content=html_content
+    )
+
     try:
-        msg = EmailMessage()
-        msg['Subject'] = "⚠️ Media Vault: File Access Expiring Soon!"
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = receiver_email
-        msg.set_content(f"Hi,\n\nThe access for file '{filename}' will expire soon. Please download it if needed.\n\nRegards,\nMedia Vault Team")
+        api_instance.send_transac_email(send_smtp_email) # 'transac' not 'transitional'
+        print(f"✅ INITIAL MAIL SENT: To {target_email}")
+    except ApiException as e:
+        print(f"❌ INITIAL MAIL ERROR: {e}")
 
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(SENDER_EMAIL, APP_PASSWORD)
-            smtp.send_message(msg)
-            print(f"SUCCESS: Alert mail sent to {receiver_email}")
 
-        # Update Supabase alert_sent status
+def send_expiry_alert(receiver_email, filename, share_id):
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    
+    # Intha email Brevo-la verify aagi irukanum
+    SENDER_EMAIL = "sb.bhavani.sb@gmail.com" 
+    
+    # User-ku anupura message-ah konjam modify panrom
+    message_body = f"""
+    <h3>⚠️ File Access Expiring Soon!</h3>
+    <p>Hi,</p>
+    <p>Neenga access panna <b>{filename}</b> file-oda time <b>75% mudinjuruchu</b>.</p>
+    <p>Innum konja nerathula intha file auto-delete aayidum. Athukulla unga work-ah finish pannidunga.</p>
+    <br>
+    <p>Regards,<br><b>Media Vault Team</b></p>
+    """
+
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=[{"email": receiver_email}],
+        sender={"name": "Media Vault", "email": SENDER_EMAIL},
+        subject="⚠️ Urgent: Your File Access is 75% Over!",
+        html_content=message_body
+    )
+
+    try:
+        # 1. Email-ah send panrom
+        api_instance.send_transac_email(send_smtp_email)
+        
+        # 2. Supabase-la 'alert_sent' column-ah True nu update panrom
+        # Ithu thaan romba mukkiyam, illana scheduler thirumba thirumba run aaga vaippu iruku
         supabase.table("file_shares").update({"alert_sent": True}).eq("id", share_id).execute()
         
-    except Exception as e:
-        print(f"ERROR in send_expiry_alert: {e}")
+        print(f"SUCCESS: 75% Alert sent to {receiver_email} for file: {filename}")
+        
+    except ApiException as e:
+        print(f"ERROR: Email send aagala. Reason: {e}")
+    except Exception as db_e:
+        print(f"ERROR: DB Update failed. Reason: {db_e}")
+
+
 
 def delete_expired_share(share_id, filename):
     """Automatically removes the share entry from Supabase at expiry time."""
@@ -620,10 +713,13 @@ def share_file():
                 # --- JOB 1: 75% Alert Mail ---
                 alert_seconds = total_diff * 0.75
                 alert_time = now + timedelta(seconds=alert_seconds)
-
+                sender_display_name = session.get('user_name')
+                if not sender_display_name:
+                    print("⚠️ WARNING: user_name is MISSING in session!")
+                    sender_display_name = "Someone"
                 file_info = supabase.table("file_metadata").select("file_name").eq("id", file_id).single().execute()
                 filename = file_info.data['file_name'] if file_info.data else "a shared file"
-
+                send_initial_share_mail(target_email, filename, sender_display_name, expires_at_str)
                 print(f"DEBUG: Alert scheduled for {alert_time}")
                 scheduler.add_job(
                     func=send_expiry_alert,
@@ -736,7 +832,6 @@ def view_folder(folder_id):
                            files=folder_files.data, 
                            current_folder_id=folder_id,
                            current_folder_name=current_folder.data['name'])
-
 
 
 @app.route('/search')
