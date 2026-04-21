@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shared with me - Media Vault</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         :root {
@@ -201,7 +202,7 @@
 
         <div class="file-grid" id="main-file-grid">
             {% for file in files %}
-            <div class="file-card" id="file-row-{{ file.id }}"> 
+            <div class="file-card" id="file-row-{{ file.id }}" data-share-id="{{ file.id }}"> 
                 <div class="file-preview">
                     {{ icons.render_file_icon(file) }}
                 </div>
@@ -261,6 +262,7 @@
 </div>
 
 <script>
+
     function toggleMenu(event, id) {
         event.stopPropagation();
         document.querySelectorAll('.dropdown-menu').forEach(m => {
@@ -273,7 +275,75 @@
     window.onclick = function() {
         document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
     }
+const sb_url = "https://wpawraxihaynnuikhxqi.supabase.co";
+    const sb_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwYXdyYXhpaGF5bm51aWtoeHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1NTQyOTIsImV4cCI6MjA4NDEzMDI5Mn0.22ZIHmLr01r8VZNxs0B1QYy3C_a1f3o27kAD-CA7T8s";
+    
+    // Inga 'supabase' nu munnadi declare panni iruntha, 
+    // thirumba 'const' podaama direct-ah initialize pannunga
+    const sb_client = supabase.createClient(sb_url, sb_key);
+function vanishFileFromUI(sharedId) {
+    console.log("Searching for Shared ID:", sharedId);
+    
+    // 1. Try finding by direct ID
+    let element = document.getElementById(`file-row-${sharedId}`);
+    
+    // 2. Oru vela kedaikala na, data-attribute vachi search pannuvom (Safe bet)
+    if (!element) {
+        element = document.querySelector(`[data-share-id="${sharedId}"]`);
+    }
 
+    if (element) {
+        console.log("Card found! Vanishing now...");
+        element.style.transition = "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)";
+        element.style.opacity = "0";
+        element.style.transform = "scale(0.8) translateY(-20px)";
+        
+        setTimeout(() => {
+            element.remove();
+            checkIfEmpty();
+        }, 600);
+    } else {
+        console.error("Mismatch! HTML-la intha ID card illai:", sharedId);
+        // Debug panna ippo HTML-la irukura cards list-ah print pannuvom
+        console.log("Current cards in UI:");
+        document.querySelectorAll('.file-card').forEach(c => console.log(c.id));
+    }
+}
+    function checkIfEmpty() {
+        const grid = document.getElementById('main-file-grid');
+        // 'file-card' class name correct-ah irukannu check pannunga
+        if (grid && grid.querySelectorAll('.file-card').length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; margin-top: 100px;">
+                    <span class="material-icons" style="font-size: 80px; color: #e8eaed;">people_outline</span>
+                    <p style="color: #5f6368; font-size: 16px;">Access expired. All files removed.</p>
+                </div>`;
+        }
+    }
+    function startRealtimeConnection() {
+        console.log("WebSocket connecting via Supabase Realtime...");
+
+        sb_client
+            .channel('db-changes')
+            .on(
+                'postgres_changes', 
+                { 
+                    event: 'DELETE', 
+                    schema: 'public', 
+                    table: 'file_shares' // Neenga enable panna table name
+                }, 
+                (payload) => {
+                    console.log('Real-time delete detected for ID:', payload.old.id);
+                    vanishFileFromUI(payload.old.id);
+                }
+            )
+            .subscribe((status) => {
+                console.log("Realtime status:", status);
+            });
+    }
+
+    // Page load aagum pothu connect panna
+    document.addEventListener('DOMContentLoaded', startRealtimeConnection);
     
 </script>
 </script>

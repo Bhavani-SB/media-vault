@@ -13,13 +13,18 @@ import traceback
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 import mimetypes
+from flask_socketio import SocketIO, emit
+from flask import jsonify # Idhu mukkiyam
+
 # Brevo Setup
 
 
 load_dotenv()
+app = Flask(__name__)
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
-app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 CORS(app)
 app.secret_key = "230525"
 url = os.getenv("SUPABASE_URL")
@@ -297,40 +302,39 @@ def inject_storage_breakdown():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        # Form-la irunthu details-ah edukkirom
         first_name = request.form.get('first_name')
         last_name = request.form.get('last_name')
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
-        # Basic Password Validation
         if password != confirm_password:
-            return "Passwords do not match!", 400
+            # JSON-ah return panrom
+            return jsonify({"status": "error", "message": "Passwords do not match!"}), 400
 
         try:
-            # 1. Supabase Auth-la user create panrom
             auth_res = supabase.auth.sign_up({"email": email, "password": password})
             
             if auth_res.user:
-                # 2. Auth success aana, 'users' table-la name details-ah insert panrom
-                # Inga Table-la 'first_name', 'last_name' columns irukanum
                 supabase.table('users').insert({
-                    "id": auth_res.user.id, # Auth ID match panna
+                    "id": auth_res.user.id,
                     "first_name": first_name,
                     "last_name": last_name,
                     "email": email,
-                    "username": f"{first_name} {last_name}" # Combined name for profile
+                    "username": f"{first_name} {last_name}"
                 }).execute()
 
-                return "Signup Success! Check your email to verify, then Login."
+                # Success-kum JSON thaan anupanum
+                return jsonify({"status": "success", "message": "Registration successful!"})
             
         except Exception as e:
-            print(f"Signup Error: {e}")
-            return f"Signup failed: {str(e)}"
+            error_msg = str(e)
+            print(f"Signup Error: {error_msg}")
+            
+            # Error-aiyum JSON format-la anupuna thaan Frontend-la 'showToast' work aagum
+            return jsonify({"status": "error", "message": error_msg}), 400
 
     return render_template('signup.html')
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -644,33 +648,38 @@ def send_expiry_alert(receiver_email, filename, share_id):
 
 
 
+
 def delete_expired_share(share_id, filename):
-    """Automatically removes the share entry from Supabase at expiry time."""
     try:
         supabase.table("file_shares").delete().eq("id", share_id).execute()
-        print(f"CLEANUP: Access for {filename} (ID: {share_id}) removed from database.")
+        # WebSocket signal: Frontend-ku 'item_removed' message anupum
+        socketio.emit('item_removed', {'id': share_id, 'type': 'share'})
+        print(f"CLEANUP: {filename} removed.")
     except Exception as e:
-        print(f"ERROR in delete_expired_share: {e}")
+        print(f"Error: {e}")
 
 def run_global_cleanup():
     try:
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # Database-la 'expires_at' ippo irukura time-vida kammiya irundha delete pannu
-        supabase.table("file_shares").delete().lt("expires_at", now_str).execute()
-        print(f"🔥 GLOBAL CLEANUP: Executed at {now_str}")
+        # 1. Expired aana IDs-ah first fetch pannuvom (Socket-ku kattiyaaga)
+        expired = supabase.table("file_shares").select("id").lt("expires_at", now_str).execute()
+        
+        if expired.data:
+            supabase.table("file_shares").delete().lt("expires_at", now_str).execute()
+            # Ella expired IDs-ayum loop panni refresh illama remove panna signal anupuvom
+            for item in expired.data:
+                socketio.emit('item_removed', {'id': item['id'], 'type': 'share'})
+        
+        print(f"🔥 GLOBAL CLEANUP finished.")
     except Exception as e:
         print(f"Cleanup Error: {e}")
 
-
 @app.route('/delete_expired_file/<file_id>', methods=['POST'])
 def delete_expired_file(file_id):
-    # 1. Delete from Supabase
-    response = supabase.table("media_vault").delete().eq("id", file_id).execute()
-    
-    # 2. (Optional) Delete the actual file from Supabase Storage bucket
-    # supabase.storage.from_('vault').remove([f"{file_id}_filename.ext"])
-    
-    return {"status": "success", "message": "File deleted from DB"}, 200
+    supabase.table("media_vault").delete().eq("id", file_id).execute()
+    # Manual delete trigger
+    socketio.emit('item_removed', {'id': file_id, 'type': 'file'})
+    return {"status": "success"}, 200
 
 @app.route('/share_file', methods=['POST'])
 def share_file():
