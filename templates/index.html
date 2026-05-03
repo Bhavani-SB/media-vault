@@ -218,26 +218,11 @@
         <form action="/search" method="GET">
             <span class="material-icons" style="color: var(--text-sub);">search</span>
             <input type="text" name="query" placeholder="Search in Drive" value="{{ request.args.get('query', '') }}">
-            
-            <select name="type">
-                <option value="">All Types</option>
-                <option value="png" {% if request.args.get('type') == 'png' %}selected{% endif %}>PNG</option>
-                <option value="jpg" {% if request.args.get('type') == 'jpg' %}selected{% endif %}>JPG</option>
-                <option value="pdf" {% if request.args.get('type') == 'pdf' %}selected{% endif %}>PDF</option>
-            </select>
-
-            <select name="sort">
-                <option value="created_at" {% if request.args.get('sort') == 'created_at' %}selected{% endif %}>Date</option>
-                <option value="file_name" {% if request.args.get('sort') == 'file_name' %}selected{% endif %}>Name</option>
-                <option value="file_size" {% if request.args.get('sort') == 'file_size' %}selected{% endif %}>Size</option>
-            </select>
             <button type="submit" style="display:none"></button>
         </form>
     </div>
 
     <div style="display: flex; align-items: center; gap: 15px;">
-        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
-        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
         
         <a href="/profile" style="text-decoration: none;">
     <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">

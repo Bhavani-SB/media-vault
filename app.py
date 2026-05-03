@@ -614,15 +614,23 @@ def send_expiry_alert(receiver_email, filename, share_id):
     # Intha email Brevo-la verify aagi irukanum
     SENDER_EMAIL = "sb.bhavani.sb@gmail.com" 
     
-    # User-ku anupura message-ah konjam modify panrom
     message_body = f"""
-    <h3>⚠️ File Access Expiring Soon!</h3>
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; border: 1px solid #eee; padding: 20px; border-radius: 10px; max-width: 500px;">
+    <h2 style="color: #e67e22;">⚠️ Action Required: Access Expiring</h2>
     <p>Hi,</p>
-    <p>Neenga access panna <b>{filename}</b> file-oda time <b>75% mudinjuruchu</b>.</p>
-    <p>Innum konja nerathula intha file auto-delete aayidum. Athukulla unga work-ah finish pannidunga.</p>
+    <p>This is a reminder from <strong>Media Vault</strong> regarding the file shared with you.</p>
+    
+    <div style="background-color: #fff5f5; padding: 15px; border-left: 5px solid #e74c3c; margin: 20px 0;">
+        <p style="margin: 5px 0;"><strong>File Name:</strong> {filename}</p>
+        <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #e74c3c; font-weight: bold;">75% of access time used</span></p>
+    </div>
+    
+    <p>This file will be <b>automatically deleted</b> very soon. Please complete your work or download the file before the time expires.</p>
+    
     <br>
-    <p>Regards,<br><b>Media Vault Team</b></p>
-    """
+    <p>Best Regards,<br><strong>Media Vault Team</strong></p>
+</div>
+"""
 
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
         to=[{"email": receiver_email}],

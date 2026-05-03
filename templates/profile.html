@@ -122,8 +122,6 @@ input:checked + .slider:before { transform: translateX(18px); }
     </div>
     
     <div style="display: flex; align-items: center; gap: 15px;">
-        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">help_outline</span>
-        <span class="material-icons" style="color: var(--text-sub); cursor: pointer;">settings</span>
         
         <div style="width: 35px; height: 35px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
             {{ session.get('user_email', 'U')[0].upper() }}
